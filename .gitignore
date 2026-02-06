@@ -195,5 +195,4 @@ cython_debug/
 
 # Build / release artifacts
 *.zip
-*.xpi
 
