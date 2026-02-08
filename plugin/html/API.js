@@ -37,6 +37,25 @@ const fetchOllamaResponse = async (model, messages, ollamaUrl = "http://localhos
     throw new Error("No response from Ollama");
 };
 
+// ============ OLLAMA - Check Connection ============
+export const checkOllamaConnection = async (ollamaUrl = "http://localhost:11434") => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(`${ollamaUrl}/api/tags`, {
+            method: "GET",
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        return response.ok;
+    } catch (error) {
+        console.error("Ollama connection check failed:", error);
+        return false;
+    }
+};
+
 // ============ OLLAMA - Fetch Models ============
 export const fetchOllamaModels = async (ollamaUrl = "http://localhost:11434") => {
     try {

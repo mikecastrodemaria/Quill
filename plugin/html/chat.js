@@ -1,6 +1,37 @@
 import { fetchResponse } from './API.js';
 import { chatPrompt } from './globals.js';
 
+// Helper pour récupérer la config du provider actif (compatible ancien/nouveau format)
+async function getActiveProviderConfig() {
+    const data = await browser.storage.local.get([
+        "activeProvider", "providers",
+        // Rétro-compatibilité
+        "apiKey", "model", "maxTokens", "provider", "ollamaUrl"
+    ]);
+
+    // Nouveau format
+    if (data.providers && data.activeProvider) {
+        const provider = data.activeProvider;
+        const config = data.providers[provider];
+        return {
+            provider: provider,
+            apiKey: config.apiKey || "",
+            model: config.model,
+            maxTokens: data.maxTokens || 4096,
+            ollamaUrl: data.providers.ollama?.url || "http://localhost:11434"
+        };
+    }
+
+    // Ancien format (rétro-compatibilité)
+    return {
+        provider: data.provider || "anthropic",
+        apiKey: data.apiKey || "",
+        model: data.model,
+        maxTokens: data.maxTokens || 4096,
+        ollamaUrl: data.ollamaUrl || "http://localhost:11434"
+    };
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
   var messageInput = document.getElementById('message-input');
   var sendButton = document.getElementById('send-button');
@@ -29,9 +60,8 @@ document.addEventListener('DOMContentLoaded', async function () {
       messagesContainer.appendChild(loadingIcon);
 
       try {
-        const { apiKey, model, maxTokens, provider, ollamaUrl } = await browser.storage.local.get(
-                                                    ["apiKey","model", "maxTokens", "provider", "ollamaUrl"]);
-        const response = await fetchResponse(apiKey, model, messages, maxTokens, provider, ollamaUrl || "http://localhost:11434");
+        const { apiKey, model, maxTokens, provider, ollamaUrl } = await getActiveProviderConfig();
+        const response = await fetchResponse(apiKey, model, messages, maxTokens, provider, ollamaUrl);
         loadingIcon.parentElement.removeChild(loadingIcon);
         sendButton.disabled = false;
 
@@ -43,7 +73,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
       } catch(error) {
         console.error(error);
-        messagesContainer.textContent = "Erreur: Impossible de récupérer les données";
+        loadingIcon.parentElement?.removeChild(loadingIcon);
+        sendButton.disabled = false;
+        displayMessage('assistant', "Erreur: " + error.message);
       }
 
       messageInput.value = '';

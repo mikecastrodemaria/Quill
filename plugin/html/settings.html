@@ -4,70 +4,171 @@
     <meta charset="UTF-8">
     <title>Quill - Paramètres</title>
     <link rel="stylesheet" type="text/css" media="screen" href="styles.css">
+    <style>
+      .provider-section {
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #2a2a2a;
+      }
+      .provider-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 1.1em;
+      }
+      .provider-header input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+      }
+      .provider-content {
+        margin-left: 30px;
+      }
+      .provider-content .row {
+        margin-bottom: 8px;
+      }
+      .status-badge {
+        font-size: 0.9em;
+        margin-left: 10px;
+      }
+      .active-provider-section {
+        background: #1a3a1a;
+        border: 2px solid #4a4;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .active-provider-section label {
+        font-weight: bold;
+        color: #8f8;
+      }
+    </style>
   </head>
   <body>
     <div class="container" id="notes-container">
       <div class="row">
-        <div class="col-25">
-          Configuration
-        </div>
+        <div class="col-25">Configuration</div>
         <div class="col-75">
           <ol>
-            <li>Choisissez votre provider IA (Anthropic, OpenAI ou Ollama local)</li>
-            <li>Pour Anthropic/OpenAI : obtenez une clé API :
+            <li>Activez et configurez un ou plusieurs providers IA ci-dessous</li>
+            <li>Obtenez vos clés API :
               <a href="https://console.anthropic.com/" target="_blank">Anthropic</a> |
               <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>
             </li>
-            <li>Pour Ollama : installez <a href="https://ollama.ai/" target="_blank">Ollama</a> et téléchargez un modèle (ex: <code>ollama pull llama3.2</code>)</li>
-            <li>Entrez votre clé API ou URL Ollama ci-dessous</li>
-            <li>Choisissez votre modèle préféré</li>
+            <li>Pour Ollama : installez <a href="https://ollama.ai/" target="_blank">Ollama</a> et un modèle</li>
+            <li>Choisissez le provider actif par défaut</li>
             <li><b>N'oubliez pas de cliquer sur Sauvegarder !</b></li>
           </ol>
         </div>
       </div>
+    </div>
+
+    <!-- PROVIDER ACTIF -->
+    <div class="container active-provider-section">
       <div class="row">
         <div class="col-25">
-          Utilisation
+          <label for="active-provider">🎯 Provider Actif</label>
         </div>
         <div class="col-75">
-          <ol>
-            <li>Ouvrez une fenêtre de composition (Nouveau, Répondre ou Transférer)</li>
-            <li>Sélectionnez du texte à traiter</li>
-            <li>Cliquez sur l'icône Quill (en haut à droite) et choisissez une action</li>
-            <li>Patientez pendant que l'IA traite votre demande</li>
-            <li>(Optionnel) Cliquez sur <i>Régénérer</i> pour une nouvelle réponse</li>
-          </ol>
+          <select id="active-provider" style="font-size: 1.1em; padding: 8px;">
+            <option value="anthropic">Anthropic (Claude)</option>
+          </select>
+          <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #888;">
+            Le provider utilisé par défaut pour traiter vos emails. Vous pouvez le changer rapidement depuis le menu Quill.
+          </p>
         </div>
       </div>
     </div>
+
+    <!-- CONFIGURATION DES PROVIDERS -->
     <div class="container">
-      <div class="row">
-        <div class="col-25"> <label for="provider">Provider IA</label> </div>
-        <div class="col-75">
-          <select id="provider">
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="openai">OpenAI (GPT)</option>
-            <option value="ollama">Ollama (Local)</option>
-          </select>
+      <h3 style="margin-top: 0;">⚙️ Configuration des Providers</h3>
+
+      <!-- ANTHROPIC -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <input type="checkbox" id="anthropic-enabled" checked>
+          <label for="anthropic-enabled">🟠 Anthropic (Claude)</label>
+        </div>
+        <div class="provider-content">
+          <div class="row">
+            <div class="col-25"><label for="anthropic-api-key">Clé API</label></div>
+            <div class="col-75">
+              <input type="password" id="anthropic-api-key" placeholder="sk-ant-api03-..." class="full-width">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-25"><label for="anthropic-model">Modèle</label></div>
+            <div class="col-75">
+              <select id="anthropic-model"></select>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <div class="col-25"> <label for="model">Modèle</label> </div>
-        <div class="col-75">
-          <select id="model">
-          </select>
+
+      <!-- OPENAI -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <input type="checkbox" id="openai-enabled">
+          <label for="openai-enabled">🟢 OpenAI (GPT)</label>
+        </div>
+        <div class="provider-content">
+          <div class="row">
+            <div class="col-25"><label for="openai-api-key">Clé API</label></div>
+            <div class="col-75">
+              <input type="password" id="openai-api-key" placeholder="sk-proj-..." class="full-width">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-25"><label for="openai-model">Modèle</label></div>
+            <div class="col-75">
+              <select id="openai-model"></select>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="row" id="api-key-row">
-        <div class="col-25"> <label for="api-key">Clé API</label></div>
-        <div class="col-75"> <input type="password" id="api-key" placeholder="sk-ant-... ou sk-..." class="full-width"></div>
+
+      <!-- OLLAMA -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <input type="checkbox" id="ollama-enabled">
+          <label for="ollama-enabled">🔵 Ollama (Local)</label>
+          <span id="ollama-status" class="status-badge"></span>
+        </div>
+        <div class="provider-content">
+          <div class="row">
+            <div class="col-25"><label for="ollama-url">URL Ollama</label></div>
+            <div class="col-75">
+              <input type="text" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434" class="full-width">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-25"><label for="ollama-model">Modèle</label></div>
+            <div class="col-75">
+              <select id="ollama-model"></select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-25"></div>
+            <div class="col-75">
+              <button id="ollama-test" class="button neutral">🔄 Tester la connexion</button>
+              <span style="margin-left: 10px; font-size: 0.85em; color: #888;">
+                <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide CORS</a>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="row" id="ollama-url-row" style="display: none;">
-        <div class="col-25"> <label for="ollama-url">URL Ollama</label></div>
-        <div class="col-75"> <input type="text" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434" class="full-width"></div>
-      </div>
+    </div>
+
+    <!-- PARAMÈTRES GÉNÉRAUX -->
+    <div class="container">
+      <h3 style="margin-top: 0;">📊 Paramètres généraux</h3>
       <div class="row">
-        <div class="col-25"> <label for="max-tokens">Longueur max (tokens)</label></div>
+        <div class="col-25"><label for="max-tokens">Longueur max (tokens)</label></div>
         <div class="col-75">
           <select id="max-tokens">
             <option value="4096">Par défaut (4096)</option>
@@ -79,43 +180,55 @@
         </div>
       </div>
       <div class="row">
-        <div class="col-25"> <label for="max-size">Entrée max (caractères)</label></div>
-        <div class="col-75"> <input type="text" id="max-size" placeholder="0 = illimité" class="full-width"></div>
-      </div>
+        <div class="col-25"><label for="max-size">Entrée max (caractères)</label></div>
+        <div class="col-75">
+          <input type="text" id="max-size" placeholder="0 = illimité" class="full-width">
+        </div>
       </div>
       <div class="row">
         <div class="col-25"></div>
         <div class="col-75">
-          <button id="default-settings" value="Réinitialiser" class="button bad">Réinitialiser</button>
-          <button value="Sauvegarder" id="save-settings" class="button good">Sauvegarder</button>
+          <button id="default-settings" class="button bad">Réinitialiser</button>
+          <button id="save-settings" class="button good">Sauvegarder</button>
         </div>
       </div>
-      <div class="row">
-        <div class="col-25"> <label for="actions-container">Actions</label> </div>
-        <div class="col-75"> <div class="container" id="actions-container"> </div></div>
-      </div>
-      <div class="row">
-        <div class="col-25"> </div>
-        <div class="col-75">
-          <button id="add-action" value="Ajouter action" class="button neutral">Ajouter une action</button>
-        </div>
-      </div>
-      <script type="module" src="settings.js"></script>
     </div>
+
+    <!-- ACTIONS -->
+    <div class="container">
+      <h3 style="margin-top: 0;">📝 Actions personnalisées</h3>
+      <div class="row">
+        <div class="col-25"><label for="actions-container">Actions</label></div>
+        <div class="col-75">
+          <div class="container" id="actions-container"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-25"></div>
+        <div class="col-75">
+          <button id="add-action" class="button neutral">Ajouter une action</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- À PROPOS -->
     <div class="container" style="margin-top: 20px;">
       <div class="row">
         <div class="col-25">À propos</div>
         <div class="col-75">
           <p style="margin: 0;">
-            <b>Quill v1.2.0</b> - Assistant email IA (Claude + GPT + Ollama)<br>
+            <b>Quill v1.3.0</b> - Assistant email IA (Claude + GPT + Ollama)<br>
             Développé par <b>Supersonique Studio SARL</b><br>
             Fork de <a href="https://github.com/ali-raheem/Aify" target="_blank">Aify</a> par Ali Raheem<br><br>
             <a href="https://github.com/mikecastrodemaria/Quill" target="_blank">GitHub</a> ·
+            <a href="https://github.com/mikecastrodemaria/Quill/wiki" target="_blank">Documentation</a> ·
             <a href="https://github.com/mikecastrodemaria/Quill/issues" target="_blank">Signaler un bug</a> ·
             Licence GPL-3.0
           </p>
         </div>
       </div>
     </div>
+
+    <script type="module" src="settings.js"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { fetchModels, fetchOpenAIModels, fetchOllamaModels } from './API.js';
+import { fetchModels, fetchOpenAIModels, fetchOllamaModels, checkOllamaConnection } from './API.js';
 import { promptVersion, defaultActions, defaultModel } from './globals.js';
 
 // ============ MODÈLES PAR PROVIDER ============
@@ -19,7 +19,6 @@ const openaiModels = [
     { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo (économique)" }
 ];
 
-// Modèles Ollama par défaut (si la détection échoue)
 const defaultOllamaModels = [
     { id: "llama3.2", name: "Llama 3.2 (recommandé)" },
     { id: "llama3.1", name: "Llama 3.1" },
@@ -31,10 +30,30 @@ const defaultOllamaModels = [
     { id: "qwen2.5", name: "Qwen 2.5" }
 ];
 
-const defaultModels = {
+const defaultProviderModels = {
     anthropic: "claude-sonnet-4-5-20250929",
     openai: "gpt-4o",
     ollama: "llama3.2"
+};
+
+// ============ DEFAULT PROVIDERS CONFIG ============
+const defaultProviders = {
+    anthropic: {
+        enabled: true,
+        apiKey: "",
+        model: "claude-sonnet-4-5-20250929"
+    },
+    openai: {
+        enabled: false,
+        apiKey: "",
+        model: "gpt-4o"
+    },
+    ollama: {
+        enabled: false,
+        url: "http://localhost:11434",
+        model: "llama3.2",
+        connected: false
+    }
 };
 
 // ============ FONCTIONS UTILITAIRES ============
@@ -98,17 +117,14 @@ const handleWarning = (promptUpdated, notesContainer) => {
 
 // ============ CHARGEMENT DES MODÈLES ============
 const loadModels = async (modelSelect, provider, selectedModel, ollamaUrl = "http://localhost:11434") => {
-    // Vider la liste actuelle
     while (modelSelect.options.length > 0) {
         modelSelect.remove(0);
     }
 
     let models;
-    const defaultForProvider = defaultModels[provider] || defaultModel;
+    const defaultForProvider = defaultProviderModels[provider] || defaultModel;
 
-    // Choisir la liste de modèles selon le provider
     if (provider === "ollama") {
-        // Essayer de récupérer les modèles installés sur Ollama
         try {
             const response = await fetchOllamaModels(ollamaUrl);
             if (response.data && response.data.length > 0) {
@@ -126,7 +142,6 @@ const loadModels = async (modelSelect, provider, selectedModel, ollamaUrl = "htt
         models = anthropicModels;
     }
 
-    // Ajouter tous les modèles disponibles
     models.forEach(model => {
         let option = document.createElement("option");
         option.value = model.id;
@@ -134,81 +149,171 @@ const loadModels = async (modelSelect, provider, selectedModel, ollamaUrl = "htt
         modelSelect.add(option);
     });
 
-    // Sélectionner le modèle sauvegardé ou par défaut
-    // Vérifier si le modèle sélectionné existe dans la nouvelle liste
     const modelExists = models.some(m => m.id === selectedModel);
     modelSelect.value = modelExists ? selectedModel : defaultForProvider;
 };
 
+// ============ TEST CONNEXION OLLAMA ============
+const testOllamaConnection = async (ollamaUrl, statusElement) => {
+    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+
+    try {
+        const isConnected = await checkOllamaConnection(ollamaUrl);
+        if (isConnected) {
+            statusElement.innerHTML = '<span style="color: green;">✅ Connecté</span>';
+            return true;
+        } else {
+            statusElement.innerHTML = `<span style="color: red;">❌ Non connecté - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Voir la documentation</a></span>`;
+            return false;
+        }
+    } catch (error) {
+        statusElement.innerHTML = `<span style="color: red;">❌ Erreur: ${error.message} - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide</a></span>`;
+        return false;
+    }
+};
+
 // ============ SAUVEGARDE ============
-const saveSettings = (actionsContainer, modelSelect, apiKeyInput, maxTokensInput, maxSizeInput, providerSelect, ollamaUrlInput) => {
+const saveSettings = async (elements, providers) => {
+    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect } = elements;
+
     const actions = Array.from(actionsContainer.children).map(actionDiv => {
         const nameInput = actionDiv.querySelector(".action-name");
         const promptInput = actionDiv.querySelector(".action-prompt");
         return { name: nameInput.value, prompt: promptInput.value };
     });
 
-    browser.storage.local.set({
-        provider: providerSelect.value,
-        model: modelSelect.value,
-        apiKey: apiKeyInput.value,
-        ollamaUrl: ollamaUrlInput ? ollamaUrlInput.value : "http://localhost:11434",
+    // Mettre à jour les configs providers depuis les inputs
+    providers.anthropic.enabled = document.getElementById("anthropic-enabled").checked;
+    providers.anthropic.apiKey = document.getElementById("anthropic-api-key").value;
+    providers.anthropic.model = document.getElementById("anthropic-model").value;
+
+    providers.openai.enabled = document.getElementById("openai-enabled").checked;
+    providers.openai.apiKey = document.getElementById("openai-api-key").value;
+    providers.openai.model = document.getElementById("openai-model").value;
+
+    providers.ollama.enabled = document.getElementById("ollama-enabled").checked;
+    providers.ollama.url = document.getElementById("ollama-url").value;
+    providers.ollama.model = document.getElementById("ollama-model").value;
+
+    // Vérifier si le provider actif est enabled
+    const activeProvider = activeProviderSelect.value;
+    if (!providers[activeProvider].enabled) {
+        alert("Attention : Le provider actif sélectionné n'est pas activé ! Veuillez l'activer ou en choisir un autre.");
+        return;
+    }
+
+    // Vérifier la connexion Ollama si c'est le provider actif
+    if (activeProvider === "ollama") {
+        const isConnected = await checkOllamaConnection(providers.ollama.url);
+        providers.ollama.connected = isConnected;
+        if (!isConnected) {
+            const continueAnyway = confirm("Ollama n'est pas connecté. Voulez-vous sauvegarder quand même ?");
+            if (!continueAnyway) return;
+        }
+    }
+
+    await browser.storage.local.set({
+        activeProvider: activeProvider,
+        providers: providers,
         actions: actions,
         maxTokens: maxTokensInput.value,
         maxSize: maxSizeInput.value,
-        promptUpdated: promptVersion
+        promptUpdated: promptVersion,
+        // Rétro-compatibilité
+        provider: activeProvider,
+        model: providers[activeProvider].model,
+        apiKey: providers[activeProvider].apiKey || "",
+        ollamaUrl: providers.ollama.url
     });
 
-    // Feedback visuel
     alert("Paramètres sauvegardés !");
 };
 
 // ============ RÉINITIALISATION ============
-const setDefaultSettings = (actionsContainer, modelSelect, apiKeyInput, maxTokensInput, maxSizeInput, providerSelect, ollamaUrlInput) => {
+const setDefaultSettings = async (elements) => {
+    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect } = elements;
+
     while (actionsContainer.firstChild) {
         actionsContainer.firstChild.remove();
     }
-    providerSelect.value = "anthropic";
-    loadModels(modelSelect, "anthropic", defaultModel);
-    apiKeyInput.value = "";
-    if (ollamaUrlInput) ollamaUrlInput.value = "http://localhost:11434";
+
+    // Reset providers
+    document.getElementById("anthropic-enabled").checked = true;
+    document.getElementById("anthropic-api-key").value = "";
+    document.getElementById("openai-enabled").checked = false;
+    document.getElementById("openai-api-key").value = "";
+    document.getElementById("ollama-enabled").checked = false;
+    document.getElementById("ollama-url").value = "http://localhost:11434";
+
+    activeProviderSelect.value = "anthropic";
     maxTokensInput.value = 4096;
     maxSizeInput.value = 0;
+
+    // Reload models
+    await loadModels(document.getElementById("anthropic-model"), "anthropic", defaultProviderModels.anthropic);
+    await loadModels(document.getElementById("openai-model"), "openai", defaultProviderModels.openai);
+    await loadModels(document.getElementById("ollama-model"), "ollama", defaultProviderModels.ollama);
+
     defaultActions.forEach(({ name, prompt }) => {
         addAction(name, prompt, actionsContainer);
     });
-    browser.storage.local.set({
+
+    await browser.storage.local.set({
+        activeProvider: "anthropic",
+        providers: defaultProviders,
+        actions: defaultActions,
+        maxTokens: 4096,
+        maxSize: 0,
+        promptUpdated: promptVersion,
+        // Rétro-compatibilité
         provider: "anthropic",
         model: defaultModel,
         apiKey: "",
-        ollamaUrl: "http://localhost:11434",
-        actions: defaultActions,
-        maxTokens: 4096,
-        promptUpdated: promptVersion
+        ollamaUrl: "http://localhost:11434"
     });
+
+    alert("Paramètres réinitialisés !");
 };
 
-// ============ GESTION AFFICHAGE CONDITIONNEL ============
-const updateProviderUI = (provider, apiKeyRow, ollamaUrlRow) => {
-    if (provider === "ollama") {
-        // Ollama: pas besoin de clé API, mais URL nécessaire
-        apiKeyRow.style.display = "none";
-        ollamaUrlRow.style.display = "flex";
-    } else {
-        // Anthropic/OpenAI: clé API nécessaire, pas d'URL Ollama
-        apiKeyRow.style.display = "flex";
-        ollamaUrlRow.style.display = "none";
+// ============ UPDATE ACTIVE PROVIDER OPTIONS ============
+const updateActiveProviderOptions = (providers, activeProviderSelect) => {
+    // Vider les options
+    while (activeProviderSelect.options.length > 0) {
+        activeProviderSelect.remove(0);
+    }
+
+    // Ajouter seulement les providers activés
+    if (providers.anthropic.enabled) {
+        const opt = document.createElement("option");
+        opt.value = "anthropic";
+        opt.text = "Anthropic (Claude)";
+        activeProviderSelect.add(opt);
+    }
+    if (providers.openai.enabled) {
+        const opt = document.createElement("option");
+        opt.value = "openai";
+        opt.text = "OpenAI (GPT)";
+        activeProviderSelect.add(opt);
+    }
+    if (providers.ollama.enabled) {
+        const opt = document.createElement("option");
+        opt.value = "ollama";
+        opt.text = "Ollama (Local)";
+        activeProviderSelect.add(opt);
+    }
+
+    // Si aucun provider activé, ajouter un placeholder
+    if (activeProviderSelect.options.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.text = "-- Activez au moins un provider --";
+        activeProviderSelect.add(opt);
     }
 };
 
 // ============ INITIALISATION ============
-document.addEventListener("DOMContentLoaded", () => {
-    const providerSelect = document.getElementById("provider");
-    const modelSelect = document.getElementById("model");
-    const apiKeyInput = document.getElementById("api-key");
-    const ollamaUrlInput = document.getElementById("ollama-url");
-    const apiKeyRow = document.getElementById("api-key-row");
-    const ollamaUrlRow = document.getElementById("ollama-url-row");
+document.addEventListener("DOMContentLoaded", async () => {
+    const activeProviderSelect = document.getElementById("active-provider");
     const actionsContainer = document.getElementById("actions-container");
     const addActionButton = document.getElementById("add-action");
     const saveButton = document.getElementById("save-settings");
@@ -217,46 +322,133 @@ document.addEventListener("DOMContentLoaded", () => {
     const defaultButton = document.getElementById("default-settings");
     const notesContainer = document.getElementById("notes-container");
 
+    // Provider-specific elements
+    const anthropicEnabled = document.getElementById("anthropic-enabled");
+    const anthropicApiKey = document.getElementById("anthropic-api-key");
+    const anthropicModel = document.getElementById("anthropic-model");
+
+    const openaiEnabled = document.getElementById("openai-enabled");
+    const openaiApiKey = document.getElementById("openai-api-key");
+    const openaiModel = document.getElementById("openai-model");
+
+    const ollamaEnabled = document.getElementById("ollama-enabled");
+    const ollamaUrl = document.getElementById("ollama-url");
+    const ollamaModel = document.getElementById("ollama-model");
+    const ollamaTestBtn = document.getElementById("ollama-test");
+    const ollamaStatus = document.getElementById("ollama-status");
+
     // Charger les paramètres sauvegardés
-    browser.storage.local.get(["provider", "model", "apiKey", "ollamaUrl", "actions", "maxTokens", "promptUpdated", "maxSize"], (data) => {
-        const {
-            provider = "anthropic",
-            model = defaultModel,
-            apiKey = '',
-            ollamaUrl = 'http://localhost:11434',
-            maxTokens = 4096,
-            promptUpdated = 0,
-            maxSize = 0,
-            actions = defaultActions
-        } = data;
+    const data = await browser.storage.local.get([
+        "activeProvider", "providers", "actions", "maxTokens", "promptUpdated", "maxSize",
+        // Rétro-compatibilité avec l'ancien format
+        "provider", "model", "apiKey", "ollamaUrl"
+    ]);
 
-        // Initialiser le provider
-        providerSelect.value = provider;
-        apiKeyInput.value = apiKey;
-        if (ollamaUrlInput) ollamaUrlInput.value = ollamaUrl;
+    let providers = data.providers || { ...defaultProviders };
 
-        // Mise à jour de l'UI selon le provider
-        updateProviderUI(provider, apiKeyRow, ollamaUrlRow);
+    // Migration depuis l'ancien format
+    if (!data.providers && data.apiKey) {
+        const oldProvider = data.provider || "anthropic";
+        if (oldProvider === "anthropic") {
+            providers.anthropic.apiKey = data.apiKey;
+            providers.anthropic.model = data.model || defaultProviderModels.anthropic;
+            providers.anthropic.enabled = true;
+        } else if (oldProvider === "openai") {
+            providers.openai.apiKey = data.apiKey;
+            providers.openai.model = data.model || defaultProviderModels.openai;
+            providers.openai.enabled = true;
+        } else if (oldProvider === "ollama") {
+            providers.ollama.url = data.ollamaUrl || "http://localhost:11434";
+            providers.ollama.model = data.model || defaultProviderModels.ollama;
+            providers.ollama.enabled = true;
+        }
+    }
 
-        // Charger les modèles selon le provider
-        loadModels(modelSelect, provider, model, ollamaUrl);
+    const activeProvider = data.activeProvider || data.provider || "anthropic";
+    const maxTokens = data.maxTokens || 4096;
+    const maxSize = data.maxSize || 0;
+    const promptUpdated = data.promptUpdated || 0;
+    const actions = data.actions || defaultActions;
 
-        maxTokensInput.value = maxTokens;
-        maxSizeInput.value = maxSize;
-        handleWarning(promptUpdated, notesContainer);
+    // Initialiser les inputs
+    anthropicEnabled.checked = providers.anthropic.enabled;
+    anthropicApiKey.value = providers.anthropic.apiKey || "";
 
-        actions.forEach(({ name, prompt }) => addAction(name, prompt, actionsContainer));
+    openaiEnabled.checked = providers.openai.enabled;
+    openaiApiKey.value = providers.openai.apiKey || "";
 
-        // Event listeners
-        providerSelect.addEventListener("change", () => {
-            const newProvider = providerSelect.value;
-            updateProviderUI(newProvider, apiKeyRow, ollamaUrlRow);
-            const currentOllamaUrl = ollamaUrlInput ? ollamaUrlInput.value : "http://localhost:11434";
-            loadModels(modelSelect, newProvider, null, currentOllamaUrl);
-        });
+    ollamaEnabled.checked = providers.ollama.enabled;
+    ollamaUrl.value = providers.ollama.url || "http://localhost:11434";
 
-        addActionButton.addEventListener("click", () => addAction("", "", actionsContainer));
-        saveButton.addEventListener("click", () => saveSettings(actionsContainer, modelSelect, apiKeyInput, maxTokensInput, maxSizeInput, providerSelect, ollamaUrlInput));
-        defaultButton.addEventListener("click", () => setDefaultSettings(actionsContainer, modelSelect, apiKeyInput, maxTokensInput, maxSizeInput, providerSelect, ollamaUrlInput));
+    // Charger les modèles pour chaque provider
+    await loadModels(anthropicModel, "anthropic", providers.anthropic.model);
+    await loadModels(openaiModel, "openai", providers.openai.model);
+    await loadModels(ollamaModel, "ollama", providers.ollama.model, providers.ollama.url);
+
+    // Mettre à jour les options du provider actif
+    updateActiveProviderOptions(providers, activeProviderSelect);
+    if (providers[activeProvider]?.enabled) {
+        activeProviderSelect.value = activeProvider;
+    }
+
+    maxTokensInput.value = maxTokens;
+    maxSizeInput.value = maxSize;
+    handleWarning(promptUpdated, notesContainer);
+    actions.forEach(({ name, prompt }) => addAction(name, prompt, actionsContainer));
+
+    // Event listeners pour les toggles
+    anthropicEnabled.addEventListener("change", () => {
+        providers.anthropic.enabled = anthropicEnabled.checked;
+        updateActiveProviderOptions(providers, activeProviderSelect);
     });
+
+    openaiEnabled.addEventListener("change", () => {
+        providers.openai.enabled = openaiEnabled.checked;
+        updateActiveProviderOptions(providers, activeProviderSelect);
+    });
+
+    ollamaEnabled.addEventListener("change", async () => {
+        providers.ollama.enabled = ollamaEnabled.checked;
+        updateActiveProviderOptions(providers, activeProviderSelect);
+
+        // Test auto de connexion si activé
+        if (ollamaEnabled.checked) {
+            await testOllamaConnection(ollamaUrl.value, ollamaStatus);
+        } else {
+            ollamaStatus.innerHTML = "";
+        }
+    });
+
+    // Test Ollama manuel
+    ollamaTestBtn.addEventListener("click", async () => {
+        const isConnected = await testOllamaConnection(ollamaUrl.value, ollamaStatus);
+        if (isConnected) {
+            // Recharger les modèles
+            await loadModels(ollamaModel, "ollama", providers.ollama.model, ollamaUrl.value);
+        }
+    });
+
+    // Recharger modèles Ollama si URL change
+    ollamaUrl.addEventListener("blur", async () => {
+        if (ollamaEnabled.checked) {
+            await testOllamaConnection(ollamaUrl.value, ollamaStatus);
+            await loadModels(ollamaModel, "ollama", providers.ollama.model, ollamaUrl.value);
+        }
+    });
+
+    // Actions
+    addActionButton.addEventListener("click", () => addAction("", "", actionsContainer));
+
+    saveButton.addEventListener("click", () => {
+        saveSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect }, providers);
+    });
+
+    defaultButton.addEventListener("click", () => {
+        setDefaultSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect });
+    });
+
+    // Test initial Ollama si activé
+    if (ollamaEnabled.checked) {
+        testOllamaConnection(ollamaUrl.value, ollamaStatus);
+    }
 });
