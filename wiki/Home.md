@@ -1,6 +1,17 @@
-# Quill Wiki
+# 🪶 Quill Wiki
 
-Welcome to the Quill documentation wiki!
+Bienvenue dans la documentation de **Quill** - l'extension Thunderbird pour traiter vos emails avec l'IA.
+
+> **Version actuelle : 1.3.1** - Support multi-providers avec clés API indépendantes
+
+## ✨ Nouveautés v1.3.1
+
+- 🔑 **Clés API par provider** - Chaque provider (Anthropic, OpenAI, Ollama) a sa propre configuration
+- ✅ **Boutons de test** - Vérifiez la validité de vos clés API en un clic
+- 🎨 **Interface moderne** - Nouveau design sombre avec thème par couleur
+- 🔄 **Activation/désactivation** - Activez uniquement les providers que vous utilisez
+
+---
 
 ## 📚 Contents
 
@@ -21,7 +32,7 @@ Welcome to the Quill documentation wiki!
 
 ### Troubleshooting
 - [[Common-Issues]] - Solutions to frequent problems
-- [[Ollama-CORS]] - Fixing Ollama connection issues
+- [[Ollama-CORS]] - ⚠️ **Important** - Fixing Ollama connection issues
 - [[API-Errors]] - Understanding error messages
 
 ### Development
@@ -42,5 +53,12 @@ Welcome to the Quill documentation wiki!
 ## 🆘 Need Help?
 
 1. Check the [[Common-Issues]] page
-2. Search [existing issues](https://github.com/mikecastrodemaria/Quill/issues)
-3. [Open a new issue](https://github.com/mikecastrodemaria/Quill/issues/new)
+2. For Ollama connection problems → [[Ollama-CORS]]
+3. Search [existing issues](https://github.com/mikecastrodemaria/Quill/issues)
+4. [Open a new issue](https://github.com/mikecastrodemaria/Quill/issues/new)
+
+---
+
+## 🌍 Langues
+
+Cette documentation est principalement en anglais. Les contributions pour d'autres langues sont les bienvenues !

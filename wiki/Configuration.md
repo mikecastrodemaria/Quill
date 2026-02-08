@@ -1,54 +1,145 @@
-# Configuration
+# ⚙️ Configuration
 
-Complete guide to configuring Quill for your needs.
+Guide complet pour configurer Quill v1.3.1.
 
-## Settings Overview
+## Accéder aux paramètres
 
-Access Quill settings via **Add-ons Manager** → **Quill** → **Options**
+**Menu Thunderbird** → **Modules complémentaires** → **Quill** → **Options**
 
-## Provider Selection
+Ou clic droit sur l'icône Quill → **Gérer l'extension** → **Options**
 
-| Provider | Best For | Requirements |
-|----------|----------|--------------|
-| **Anthropic (Claude)** | Quality responses | API key |
-| **OpenAI (GPT)** | Fast responses | API key |
-| **Ollama** | Privacy, offline use | Local installation |
+---
 
-## API Keys
+## 🎯 Provider Actif
 
-### Anthropic
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. Create account and generate API key
-3. Paste in Quill settings
+En haut des paramètres, vous pouvez choisir le **provider actif** - celui qui sera utilisé par défaut pour traiter vos emails.
 
-### OpenAI
-1. Go to [platform.openai.com](https://platform.openai.com)
-2. Create account and generate API key
-3. Paste in Quill settings
+> **Note** : Seuls les providers activés (checkbox cochée) apparaissent dans cette liste.
 
-### Ollama
-No API key needed - just install Ollama and configure the URL (default: `http://localhost:11434`)
+---
 
-## Model Selection
+## 🔧 Configuration des Providers
 
-| Provider | Model | Use Case |
-|----------|-------|----------|
-| Anthropic | claude-sonnet-4-20250514 | Best balance |
-| Anthropic | claude-3-5-haiku-20241022 | Fast & cheap |
-| OpenAI | gpt-4o | High quality |
-| OpenAI | gpt-4o-mini | Fast & cheap |
-| Ollama | llama3.2 | General use |
-| Ollama | mistral | Fast responses |
+### Nouveau dans v1.3.1
 
-## Max Tokens
+Chaque provider a maintenant :
+- ✅ **Checkbox d'activation** - Activez/désactivez le provider
+- 🔑 **Sa propre clé API** - Indépendante des autres providers
+- 🧪 **Bouton de test** - Vérifiez la validité de votre configuration
 
-Controls response length:
-- **1024**: Short responses
-- **2048**: Medium (default)
-- **4096**: Long responses
+### 🟠 Anthropic (Claude)
 
-## See Also
+| Paramètre | Description |
+|-----------|-------------|
+| **Activer** | Cochez pour utiliser Claude |
+| **Clé API** | Commencez par `sk-ant-api03-...` |
+| **Modèle** | Claude Sonnet 4.5 recommandé |
+| **Tester** | Vérifie que la clé est valide |
 
-- [[Anthropic-Setup]] - Detailed Claude setup
-- [[OpenAI-Setup]] - Detailed GPT setup
-- [[Ollama-Setup]] - Detailed Ollama setup
+**Obtenir une clé API :**
+1. Créez un compte sur [console.anthropic.com](https://console.anthropic.com)
+2. Allez dans API Keys
+3. Créez une nouvelle clé
+4. Copiez-la dans Quill
+
+### 🟢 OpenAI (GPT)
+
+| Paramètre | Description |
+|-----------|-------------|
+| **Activer** | Cochez pour utiliser GPT |
+| **Clé API** | Commencez par `sk-proj-...` |
+| **Modèle** | GPT-4o recommandé |
+| **Tester** | Vérifie que la clé est valide |
+
+**Obtenir une clé API :**
+1. Créez un compte sur [platform.openai.com](https://platform.openai.com)
+2. Allez dans API Keys
+3. Créez une nouvelle clé
+4. Copiez-la dans Quill
+
+### 🔵 Ollama (Local)
+
+| Paramètre | Description |
+|-----------|-------------|
+| **Activer** | Cochez pour utiliser Ollama |
+| **URL** | Par défaut : `http://localhost:11434` |
+| **Modèle** | Llama 3.2 recommandé |
+| **Tester** | Vérifie la connexion à Ollama |
+
+**Installation :**
+1. Téléchargez [Ollama](https://ollama.com)
+2. Installez un modèle : `ollama pull llama3.2`
+3. Configurez CORS → voir [[Ollama-CORS]]
+
+> ⚠️ **Important** : Si le test affiche "❌ Non connecté", consultez la page [[Ollama-CORS]].
+
+---
+
+## 📊 Comparaison des Providers
+
+| Provider | Avantages | Inconvénients |
+|----------|-----------|---------------|
+| **Anthropic** | Meilleure qualité, bon contexte | Payant |
+| **OpenAI** | Rapide, écosystème riche | Payant |
+| **Ollama** | Gratuit, privé, hors-ligne | Nécessite un bon PC |
+
+---
+
+## 🎚️ Paramètres Généraux
+
+### Longueur max (tokens)
+
+Contrôle la longueur maximale des réponses :
+
+| Valeur | Usage |
+|--------|-------|
+| **512** | Réponses très courtes |
+| **1024** | Réponses courtes |
+| **2048** | Réponses moyennes |
+| **4096** | Réponses longues (défaut) |
+| **8192** | Réponses très longues |
+
+### Entrée max (caractères)
+
+Limite la taille du texte envoyé à l'IA :
+- `0` = Pas de limite (défaut)
+- Utile pour éviter les coûts excessifs sur de longs emails
+
+---
+
+## 📝 Actions Personnalisées
+
+Créez vos propres actions avec des prompts personnalisés.
+
+**Exemple :**
+- **Nom** : Traduire en espagnol
+- **Prompt** : `Traduis ce texte en espagnol, garde le même ton et style :`
+
+Voir [[Custom-Actions]] pour plus de détails.
+
+---
+
+## 💾 Sauvegarde
+
+> **⚠️ N'oubliez pas de cliquer sur "Sauvegarder" !**
+
+Les paramètres ne sont pas sauvegardés automatiquement.
+
+---
+
+## 🔄 Réinitialiser
+
+Le bouton "Réinitialiser" :
+- Efface toutes les clés API
+- Restaure les actions par défaut
+- Remet les paramètres par défaut
+
+---
+
+## 📚 Voir aussi
+
+- [[Anthropic-Setup]] - Guide détaillé Anthropic
+- [[OpenAI-Setup]] - Guide détaillé OpenAI
+- [[Ollama-Setup]] - Guide détaillé Ollama
+- [[Ollama-CORS]] - Résoudre les problèmes de connexion Ollama
+- [[Custom-Actions]] - Créer des actions personnalisées

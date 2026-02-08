@@ -1,4 +1,4 @@
-# Quick Start Guide
+# 🚀 Quick Start Guide
 
 Get Quill working in 5 minutes!
 
@@ -14,20 +14,22 @@ Get Quill working in 5 minutes!
 
 2. **Get a model**:
    ```bash
-   ollama pull llama3
+   ollama pull llama3.2
    ```
 
-3. **Enable CORS** (required):
+3. **Enable CORS** (⚠️ required):
    ```bash
    # Quit Ollama app first, then:
    OLLAMA_ORIGINS="*" ollama serve
    ```
+   > 📖 See [[Ollama-CORS]] for permanent setup
 
 4. **Configure Quill**:
-   - Provider: **Ollama (Local)**
+   - ☑️ Cochez **Ollama (Local)**
    - URL: `http://localhost:11434`
-   - Model: **llama3**
-   - Save!
+   - Cliquez **🔄 Tester la connexion**
+   - Model: **llama3.2**
+   - **Sauvegarder!**
 
 ---
 
@@ -38,13 +40,14 @@ Get Quill working in 5 minutes!
 1. **Get API Key**:
    - Go to [console.anthropic.com](https://console.anthropic.com)
    - Create account → API Keys → Create Key
-   - Copy the key
+   - Copy the key (starts with `sk-ant-`)
 
 2. **Configure Quill**:
-   - Provider: **Anthropic (Claude)**
-   - API Key: Paste your key
+   - ☑️ Cochez **Anthropic (Claude)**
+   - Paste your API key
+   - Cliquez **🔑 Tester la clé API** → ✅ Clé valide
    - Model: **Claude Sonnet 4.5**
-   - Save!
+   - **Sauvegarder!**
 
 ---
 
@@ -55,13 +58,22 @@ Get Quill working in 5 minutes!
 1. **Get API Key**:
    - Go to [platform.openai.com](https://platform.openai.com)
    - Create account → API Keys → Create new secret key
-   - Copy the key
+   - Copy the key (starts with `sk-proj-`)
 
 2. **Configure Quill**:
-   - Provider: **OpenAI (GPT)**
-   - API Key: Paste your key
+   - ☑️ Cochez **OpenAI (GPT)**
+   - Paste your API key
+   - Cliquez **🔑 Tester la clé API** → ✅ Clé valide
    - Model: **GPT-4o**
-   - Save!
+   - **Sauvegarder!**
+
+---
+
+## 🎯 Choose Your Active Provider
+
+In the green "Provider Actif" section at the top, select which provider to use by default.
+
+> **💡 Tip**: You can configure multiple providers and switch between them easily!
 
 ---
 
@@ -77,6 +89,17 @@ Get Quill working in 5 minutes!
 8. **Click** "Insert" to add it to your email
 
 🎉 **Done!** You're now using AI in your emails.
+
+---
+
+## ❌ Something Wrong?
+
+| Problem | Solution |
+|---------|----------|
+| "❌ Non connecté" (Ollama) | See [[Ollama-CORS]] |
+| "❌ Clé API invalide" | Check your key, get a new one |
+| "❌ Timeout" | Check your internet connection |
+| Quill icon not showing | Restart Thunderbird |
 
 ---
 
