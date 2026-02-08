@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Quill",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Extension Thunderbird pour traiter vos emails avec Claude (Anthropic), GPT (OpenAI) ou Ollama (local) - Résumer, traduire, corriger et rédiger des réponses.",
   "author": "Supersonique Studio SARL (fork de Aify par Ali Raheem)",
   "homepage_url": "https://github.com/mikecastrodemaria/Quill",

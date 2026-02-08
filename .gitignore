@@ -197,3 +197,6 @@ cython_debug/
 *.zip
 
 .claude-context.md
+zi*
+.claude-context.md
+zi*
