@@ -1,4 +1,4 @@
-import { fetchModels, fetchOpenAIModels, fetchOllamaModels, checkOllamaConnection } from './API.js';
+import { fetchModels, fetchOpenAIModels, fetchOllamaModels, checkOllamaConnection, checkAnthropicApiKey, checkOpenAIApiKey } from './API.js';
 import { promptVersion, defaultActions, defaultModel } from './globals.js';
 
 // ============ MODÈLES PAR PROVIDER ============
@@ -160,14 +160,42 @@ const testOllamaConnection = async (ollamaUrl, statusElement) => {
     try {
         const isConnected = await checkOllamaConnection(ollamaUrl);
         if (isConnected) {
-            statusElement.innerHTML = '<span style="color: green;">✅ Connecté</span>';
+            statusElement.innerHTML = '<span style="color: #4ade80;">✅ Connecté</span>';
             return true;
         } else {
-            statusElement.innerHTML = `<span style="color: red;">❌ Non connecté - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Voir la documentation</a></span>`;
+            statusElement.innerHTML = `<span style="color: #f87171;">❌ Non connecté - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide</a></span>`;
             return false;
         }
     } catch (error) {
-        statusElement.innerHTML = `<span style="color: red;">❌ Erreur: ${error.message} - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide</a></span>`;
+        statusElement.innerHTML = `<span style="color: #f87171;">❌ ${error.message}</span>`;
+        return false;
+    }
+};
+
+// ============ TEST CLÉ API ANTHROPIC ============
+const testAnthropicKey = async (apiKey, statusElement) => {
+    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+
+    const result = await checkAnthropicApiKey(apiKey);
+    if (result.valid) {
+        statusElement.innerHTML = '<span style="color: #4ade80;">✅ Clé valide</span>';
+        return true;
+    } else {
+        statusElement.innerHTML = `<span style="color: #f87171;">❌ ${result.error}</span>`;
+        return false;
+    }
+};
+
+// ============ TEST CLÉ API OPENAI ============
+const testOpenAIKey = async (apiKey, statusElement) => {
+    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+
+    const result = await checkOpenAIApiKey(apiKey);
+    if (result.valid) {
+        statusElement.innerHTML = '<span style="color: #4ade80;">✅ Clé valide</span>';
+        return true;
+    } else {
+        statusElement.innerHTML = `<span style="color: #f87171;">❌ ${result.error}</span>`;
         return false;
     }
 };
@@ -326,10 +354,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const anthropicEnabled = document.getElementById("anthropic-enabled");
     const anthropicApiKey = document.getElementById("anthropic-api-key");
     const anthropicModel = document.getElementById("anthropic-model");
+    const anthropicTestBtn = document.getElementById("anthropic-test");
+    const anthropicStatus = document.getElementById("anthropic-status");
 
     const openaiEnabled = document.getElementById("openai-enabled");
     const openaiApiKey = document.getElementById("openai-api-key");
     const openaiModel = document.getElementById("openai-model");
+    const openaiTestBtn = document.getElementById("openai-test");
+    const openaiStatus = document.getElementById("openai-status");
 
     const ollamaEnabled = document.getElementById("ollama-enabled");
     const ollamaUrl = document.getElementById("ollama-url");
@@ -417,6 +449,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else {
             ollamaStatus.innerHTML = "";
         }
+    });
+
+    // Test Anthropic API Key
+    anthropicTestBtn.addEventListener("click", async () => {
+        await testAnthropicKey(anthropicApiKey.value, anthropicStatus);
+    });
+
+    // Test OpenAI API Key
+    openaiTestBtn.addEventListener("click", async () => {
+        await testOpenAIKey(openaiApiKey.value, openaiStatus);
     });
 
     // Test Ollama manuel

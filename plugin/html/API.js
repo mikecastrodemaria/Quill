@@ -183,6 +183,94 @@ export const fetchOpenAIModels = async (apiKey) => {
     return await response.json();
 };
 
+// ============ ANTHROPIC - Check API Key ============
+export const checkAnthropicApiKey = async (apiKey) => {
+    if (!apiKey || !apiKey.startsWith("sk-ant-")) {
+        return { valid: false, error: "Clé API invalide (doit commencer par sk-ant-)" };
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        // Test avec une requête minimale
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01",
+                "anthropic-dangerous-direct-browser-access": "true"
+            },
+            body: JSON.stringify({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 1,
+                messages: [{ role: "user", content: "Hi" }]
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            return { valid: true };
+        } else if (response.status === 401) {
+            return { valid: false, error: "Clé API invalide ou expirée" };
+        } else if (response.status === 403) {
+            return { valid: false, error: "Accès refusé - vérifiez les permissions" };
+        } else {
+            const data = await response.json().catch(() => ({}));
+            return { valid: false, error: data.error?.message || `Erreur ${response.status}` };
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return { valid: false, error: "Timeout - vérifiez votre connexion" };
+        }
+        return { valid: false, error: error.message };
+    }
+};
+
+// ============ OPENAI - Check API Key ============
+export const checkOpenAIApiKey = async (apiKey) => {
+    if (!apiKey) {
+        return { valid: false, error: "Clé API manquante" };
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        // Test avec l'endpoint models (léger)
+        const response = await fetch("https://api.openai.com/v1/models", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`
+            },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            return { valid: true };
+        } else if (response.status === 401) {
+            return { valid: false, error: "Clé API invalide ou expirée" };
+        } else if (response.status === 403) {
+            return { valid: false, error: "Accès refusé - vérifiez les permissions" };
+        } else if (response.status === 429) {
+            return { valid: false, error: "Rate limit atteint - réessayez plus tard" };
+        } else {
+            const data = await response.json().catch(() => ({}));
+            return { valid: false, error: data.error?.message || `Erreur ${response.status}` };
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return { valid: false, error: "Timeout - vérifiez votre connexion" };
+        }
+        return { valid: false, error: error.message };
+    }
+};
+
 // ============ DÉTECTION AUTO DU PROVIDER ============
 const detectProvider = (apiKey) => {
     if (!apiKey) return null;

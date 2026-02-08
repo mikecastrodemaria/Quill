@@ -264,6 +264,7 @@
         <div class="provider-header">
           <input type="checkbox" id="anthropic-enabled" checked>
           <label for="anthropic-enabled">🟠 Anthropic (Claude)</label>
+          <span id="anthropic-status" class="status-badge"></span>
         </div>
         <div class="provider-content">
           <div class="row">
@@ -278,6 +279,12 @@
               <select id="anthropic-model"></select>
             </div>
           </div>
+          <div class="row">
+            <div class="col-25"></div>
+            <div class="col-75">
+              <button id="anthropic-test" class="button neutral">🔑 Tester la clé API</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -286,6 +293,7 @@
         <div class="provider-header">
           <input type="checkbox" id="openai-enabled">
           <label for="openai-enabled">🟢 OpenAI (GPT)</label>
+          <span id="openai-status" class="status-badge"></span>
         </div>
         <div class="provider-content">
           <div class="row">
@@ -298,6 +306,12 @@
             <div class="col-25"><label for="openai-model">Modèle</label></div>
             <div class="col-75">
               <select id="openai-model"></select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-25"></div>
+            <div class="col-75">
+              <button id="openai-test" class="button neutral">🔑 Tester la clé API</button>
             </div>
           </div>
         </div>
