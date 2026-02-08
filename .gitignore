@@ -196,3 +196,4 @@ cython_debug/
 # Build / release artifacts
 *.zip
 
+.claude-context.md
