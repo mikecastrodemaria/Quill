@@ -1,5 +1,6 @@
 import { fetchResponse } from './API.js';
-import { chatPrompt } from './globals.js';
+import { getChatPrompt } from './globals.js';
+import { getLanguage, t } from './i18n.js';
 
 // Helper pour récupérer la config du provider actif (compatible ancien/nouveau format)
 async function getActiveProviderConfig() {
@@ -33,17 +34,21 @@ async function getActiveProviderConfig() {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
+  const language = await getLanguage();
   var messageInput = document.getElementById('message-input');
   var sendButton = document.getElementById('send-button');
   var messagesContainer = document.getElementById('messages');
   var loadingIcon = document.createElement('img');
+
+  messageInput.placeholder = t(language, "chatPlaceholder");
+  sendButton.innerText = t(language, "chatSend");
 
   loadingIcon.src = '/images/loading.png';
   loadingIcon.classList.add('rotate');
 
   var storage = await browser.storage.local.get(["messages"]);
     let messages = (storage.messages?.length)? storage.messages : [{role: "system",
-                                    content: chatPrompt}];
+                                    content: getChatPrompt(language)}];
 
   messages.forEach(function(message) {
     displayMessage(message.role, message.content);
@@ -75,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.error(error);
         loadingIcon.parentElement?.removeChild(loadingIcon);
         sendButton.disabled = false;
-        displayMessage('assistant', "Erreur: " + error.message);
+        displayMessage('assistant', `${t(language, 'errorPrefix')} ${error.message}`);
       }
 
       messageInput.value = '';

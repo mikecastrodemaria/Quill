@@ -1,4 +1,5 @@
 import { fetchResponse } from './API.js';
+import { getLanguage, t } from './i18n.js';
 
 // Helper pour récupérer la config du provider actif (compatible ancien/nouveau format)
 async function getActiveProviderConfig() {
@@ -31,7 +32,7 @@ async function getActiveProviderConfig() {
     };
 }
 
-async function generate(draftContainer, messages, draftTitle) {
+async function generate(draftContainer, messages, draftTitle, language) {
     const loadingIcon = document.createElement("img");
     loadingIcon.src = "/images/loading.png";
     loadingIcon.classList.add("rotate");
@@ -48,17 +49,22 @@ async function generate(draftContainer, messages, draftTitle) {
         await browser.storage.local.set({messages});
     } catch (error) {
         console.error("Quill Error:", error);
-        draftContainer.textContent = "Erreur: " + error.message;
+        draftContainer.textContent = `${t(language, "errorPrefix")} ${error.message}`;
     }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    const language = await getLanguage();
     const regenButton = document.getElementById('regenerate');
     const chatButton = document.getElementById('chat-button');
     const insertButton = document.getElementById('insert-button');
     const draftContainer = document.getElementById("draft-container");
+
+    insertButton.innerText = t(language, "draftInsert");
+    chatButton.innerText = t(language, "draftToChat");
+    regenButton.innerText = t(language, "draftRegenerate");
     const { messages, draftTitle, tabId } = await browser.storage.local.get(["messages", "draftTitle", "tabId"]);
-    regenButton.addEventListener("click", () => generate(draftContainer, messages, draftTitle));
+    regenButton.addEventListener("click", () => generate(draftContainer, messages, draftTitle, language));
     chatButton.addEventListener("click", async () => {
         await browser.storage.local.set({messages});
         await browser.windows.create({ url: "/html/chat.html", type: "popup",
@@ -69,6 +75,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         browser.tabs.sendMessage(tabId, { command: "replaceSelectedText", text: draftContainer.innerText });
         browser.windows.getCurrent().then((w) => {browser.windows.remove(w.id)})
     });
-    generate(draftContainer, messages, draftTitle);
+    generate(draftContainer, messages, draftTitle, language);
     await browser.storage.local.set({ messages: [], draftTitle: "" });
 });
