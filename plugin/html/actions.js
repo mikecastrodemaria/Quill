@@ -1,4 +1,5 @@
 import { promptVersion } from './globals.js';
+import { getLanguage, t } from './i18n.js';
 
 const truncate = async (text) => {
     const { maxSize } = await browser.storage.local.get(
@@ -44,8 +45,12 @@ const addAction = (name, prompt, actionsContainer) => {
     actionsContainer.appendChild(actionDiv);
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const actionsContainer = document.getElementById("actions-container");
+    const language = await getLanguage();
+    document.getElementById('chat-link').innerText = t(language, 'actionsChatLink');
+    document.getElementById('settings-link').innerText = t(language, 'actionsSettingsLink');
+
     browser.storage.local.get(["actions", "promptUpdated"], (data) => {
         const { actions, promptUpdated = 0 } = data;
         if (promptVersion > promptUpdated) {

@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Quill - Paramètres</title>
+    <title>Quill - Settings</title>
     <link rel="stylesheet" type="text/css" media="screen" href="styles.css">
     <style>
       /* === THEME MODERNE QUILL === */
@@ -225,14 +225,14 @@
         <div class="col-25">Configuration</div>
         <div class="col-75">
           <ol>
-            <li>Activez et configurez un ou plusieurs providers IA ci-dessous</li>
-            <li>Obtenez vos clés API :
+            <li>Enable and configure one or more AI providers below</li>
+            <li>Get your API keys:
               <a href="https://console.anthropic.com/" target="_blank">Anthropic</a> |
               <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>
             </li>
-            <li>Pour Ollama : installez <a href="https://ollama.ai/" target="_blank">Ollama</a> et un modèle</li>
-            <li>Choisissez le provider actif par défaut</li>
-            <li><b>N'oubliez pas de cliquer sur Sauvegarder !</b></li>
+            <li>For Ollama: install <a href="https://ollama.ai/" target="_blank">Ollama</a> and a model</li>
+            <li>Choose the default active provider</li>
+            <li><b>Don't forget to click Save!</b></li>
           </ol>
         </div>
       </div>
@@ -242,14 +242,14 @@
     <div class="container active-provider-section">
       <div class="row">
         <div class="col-25">
-          <label for="active-provider">🎯 Provider Actif</label>
+          <label for="active-provider">🎯 Active Provider</label>
         </div>
         <div class="col-75">
           <select id="active-provider" style="font-size: 1.1em; padding: 8px;">
             <option value="anthropic">Anthropic (Claude)</option>
           </select>
           <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #888;">
-            Le provider utilisé par défaut pour traiter vos emails. Vous pouvez le changer rapidement depuis le menu Quill.
+            The provider used by default to process your emails. You can quickly switch it from the Quill menu.
           </p>
         </div>
       </div>
@@ -257,7 +257,7 @@
 
     <!-- CONFIGURATION DES PROVIDERS -->
     <div class="container">
-      <h3 style="margin-top: 0;">⚙️ Configuration des Providers</h3>
+      <h3 style="margin-top: 0;">⚙️ Provider Configuration</h3>
 
       <!-- ANTHROPIC -->
       <div class="provider-section anthropic">
@@ -268,13 +268,13 @@
         </div>
         <div class="provider-content">
           <div class="row">
-            <div class="col-25"><label for="anthropic-api-key">Clé API</label></div>
+            <div class="col-25"><label for="anthropic-api-key">API Key</label></div>
             <div class="col-75">
               <input type="password" id="anthropic-api-key" placeholder="sk-ant-api03-..." class="full-width">
             </div>
           </div>
           <div class="row">
-            <div class="col-25"><label for="anthropic-model">Modèle</label></div>
+            <div class="col-25"><label for="anthropic-model">Model</label></div>
             <div class="col-75">
               <select id="anthropic-model"></select>
             </div>
@@ -282,7 +282,7 @@
           <div class="row">
             <div class="col-25"></div>
             <div class="col-75">
-              <button id="anthropic-test" class="button neutral">🔑 Tester la clé API</button>
+              <button id="anthropic-test" class="button neutral">🔑 Test API key</button>
             </div>
           </div>
         </div>
@@ -297,13 +297,13 @@
         </div>
         <div class="provider-content">
           <div class="row">
-            <div class="col-25"><label for="openai-api-key">Clé API</label></div>
+            <div class="col-25"><label for="openai-api-key">API Key</label></div>
             <div class="col-75">
               <input type="password" id="openai-api-key" placeholder="sk-proj-..." class="full-width">
             </div>
           </div>
           <div class="row">
-            <div class="col-25"><label for="openai-model">Modèle</label></div>
+            <div class="col-25"><label for="openai-model">Model</label></div>
             <div class="col-75">
               <select id="openai-model"></select>
             </div>
@@ -311,7 +311,7 @@
           <div class="row">
             <div class="col-25"></div>
             <div class="col-75">
-              <button id="openai-test" class="button neutral">🔑 Tester la clé API</button>
+              <button id="openai-test" class="button neutral">🔑 Test API key</button>
             </div>
           </div>
         </div>
@@ -332,7 +332,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="col-25"><label for="ollama-model">Modèle</label></div>
+            <div class="col-25"><label for="ollama-model">Model</label></div>
             <div class="col-75">
               <select id="ollama-model"></select>
             </div>
@@ -340,9 +340,9 @@
           <div class="row">
             <div class="col-25"></div>
             <div class="col-75">
-              <button id="ollama-test" class="button neutral">🔄 Tester la connexion</button>
+              <button id="ollama-test" class="button neutral">🔄 Test connection</button>
               <span style="margin-left: 10px; font-size: 0.85em; color: #888;">
-                <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide CORS</a>
+                <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">CORS help</a>
               </span>
             </div>
           </div>
@@ -352,37 +352,46 @@
 
     <!-- PARAMÈTRES GÉNÉRAUX -->
     <div class="container">
-      <h3 style="margin-top: 0;">📊 Paramètres généraux</h3>
+      <h3 style="margin-top: 0;">📊 General settings</h3>
       <div class="row">
-        <div class="col-25"><label for="max-tokens">Longueur max (tokens)</label></div>
+        <div class="col-25"><label for="language" id="language-label">Interface language</label></div>
         <div class="col-75">
-          <select id="max-tokens">
-            <option value="4096">Par défaut (4096)</option>
-            <option value="8192">Long (8192 tokens)</option>
-            <option value="2048">Moyen (2048 tokens)</option>
-            <option value="1024">Court (1024 tokens)</option>
-            <option value="512">Très court (512 tokens)</option>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
           </select>
         </div>
       </div>
       <div class="row">
-        <div class="col-25"><label for="max-size">Entrée max (caractères)</label></div>
+        <div class="col-25"><label for="max-tokens">Max length (tokens)</label></div>
         <div class="col-75">
-          <input type="text" id="max-size" placeholder="0 = illimité" class="full-width">
+          <select id="max-tokens">
+            <option value="4096">Default (4096)</option>
+            <option value="8192">Long (8192 tokens)</option>
+            <option value="2048">Medium (2048 tokens)</option>
+            <option value="1024">Short (1024 tokens)</option>
+            <option value="512">Very short (512 tokens)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-25"><label for="max-size">Max input (characters)</label></div>
+        <div class="col-75">
+          <input type="text" id="max-size" placeholder="0 = unlimited" class="full-width">
         </div>
       </div>
       <div class="row">
         <div class="col-25"></div>
         <div class="col-75">
-          <button id="default-settings" class="button bad">Réinitialiser</button>
-          <button id="save-settings" class="button good">Sauvegarder</button>
+          <button id="default-settings" class="button bad">Reset</button>
+          <button id="save-settings" class="button good">Save</button>
         </div>
       </div>
     </div>
 
     <!-- ACTIONS -->
     <div class="container">
-      <h3 style="margin-top: 0;">📝 Actions personnalisées</h3>
+      <h3 style="margin-top: 0;">📝 Custom actions</h3>
       <div class="row">
         <div class="col-25"><label for="actions-container">Actions</label></div>
         <div class="col-75">
@@ -392,7 +401,7 @@
       <div class="row">
         <div class="col-25"></div>
         <div class="col-75">
-          <button id="add-action" class="button neutral">Ajouter une action</button>
+          <button id="add-action" class="button neutral">Add action</button>
         </div>
       </div>
     </div>
@@ -400,15 +409,15 @@
     <!-- À PROPOS -->
     <div class="container" style="margin-top: 20px;">
       <div class="row">
-        <div class="col-25">À propos</div>
+        <div class="col-25">About</div>
         <div class="col-75">
           <p style="margin: 0;">
-            <b>Quill v1.3.1</b> - Assistant email IA (Claude + GPT + Ollama)<br>
+            <b>Quill v1.3.1</b> - AI email assistant (Claude + GPT + Ollama)<br>
             Développé par <b>Supersonique Studio SARL</b><br>
             Fork de <a href="https://github.com/ali-raheem/Aify" target="_blank">Aify</a> par Ali Raheem<br><br>
             <a href="https://github.com/mikecastrodemaria/Quill" target="_blank">GitHub</a> ·
             <a href="https://github.com/mikecastrodemaria/Quill/wiki" target="_blank">Documentation</a> ·
-            <a href="https://github.com/mikecastrodemaria/Quill/issues" target="_blank">Signaler un bug</a> ·
+            <a href="https://github.com/mikecastrodemaria/Quill/issues" target="_blank">Report a bug</a> ·
             Licence GPL-3.0
           </p>
         </div>

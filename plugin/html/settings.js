@@ -1,5 +1,6 @@
 import { fetchModels, fetchOpenAIModels, fetchOllamaModels, checkOllamaConnection, checkAnthropicApiKey, checkOpenAIApiKey } from './API.js';
-import { promptVersion, defaultActions, defaultModel } from './globals.js';
+import { promptVersion, getDefaultActions, defaultModel } from './globals.js';
+import { getLanguage, setLanguage, t } from './i18n.js';
 
 // ============ MODÈLES PAR PROVIDER ============
 const anthropicModels = [
@@ -57,6 +58,10 @@ const defaultProviders = {
 };
 
 // ============ FONCTIONS UTILITAIRES ============
+
+let currentLanguage = "en";
+const tr = (key) => t(currentLanguage, key);
+
 const addAction = (name, prompt, actionsContainer) => {
     const actionDiv = document.createElement("div");
     const nameInput = document.createElement("input");
@@ -70,7 +75,7 @@ const addAction = (name, prompt, actionsContainer) => {
     promptInput.value = prompt;
     promptInput.classList.add("action-prompt");
 
-    deleteButton.innerText = "Supprimer";
+    deleteButton.innerText = tr("deleteAction");
     deleteButton.classList.add("button", "bad");
     deleteButton.addEventListener("click", () => actionDiv.remove());
 
@@ -96,16 +101,16 @@ const handleWarning = (promptUpdated, notesContainer) => {
         warningIcon.src = "/images/warning.png";
         warningIcon.classList.add('small-icon');
         let warningText = document.createElement('span');
-        warningText.innerText = "De nouveaux prompts sont disponibles. Sauvegardez vos prompts personnalisés et cliquez sur Réinitialiser pour charger les nouveaux. ";
+        warningText.innerText = `${tr("warningAvailablePrompts")} `;
         let ignoreButton = document.createElement('button');
         ignoreButton.classList.add('button');
         ignoreButton.classList.add('bad');
-        ignoreButton.innerText = "Ignorer";
+        ignoreButton.innerText = tr("warningIgnore");
         ignoreButton.addEventListener('click', function () {
             browser.storage.local.set({promptUpdated: promptVersion});
             warningContainer.parentElement.removeChild(warningContainer);
         });
-        warningDiv25.innerText = "Attention "
+        warningDiv25.innerText = `${tr("warningLabel")} `
         warningDiv25.appendChild(warningIcon);
         warningDiv75.appendChild(warningText);
         warningDiv75.appendChild(ignoreButton);
@@ -133,7 +138,7 @@ const loadModels = async (modelSelect, provider, selectedModel, ollamaUrl = "htt
                 models = defaultOllamaModels;
             }
         } catch (error) {
-            console.log("Ollama non disponible, utilisation des modèles par défaut");
+            console.log(tr("ollamaUnavailableFallback"));
             models = defaultOllamaModels;
         }
     } else if (provider === "openai") {
@@ -155,15 +160,15 @@ const loadModels = async (modelSelect, provider, selectedModel, ollamaUrl = "htt
 
 // ============ TEST CONNEXION OLLAMA ============
 const testOllamaConnection = async (ollamaUrl, statusElement) => {
-    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+    statusElement.innerHTML = `<span style="color: orange;">${tr("statusTesting")}</span>`;
 
     try {
         const isConnected = await checkOllamaConnection(ollamaUrl);
         if (isConnected) {
-            statusElement.innerHTML = '<span style="color: #4ade80;">✅ Connecté</span>';
+            statusElement.innerHTML = `<span style="color: #4ade80;">${tr("statusConnected")}</span>`;
             return true;
         } else {
-            statusElement.innerHTML = `<span style="color: #f87171;">❌ Non connecté - <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">Aide</a></span>`;
+            statusElement.innerHTML = `<span style="color: #f87171;">${tr("statusNotConnected")} <a href="https://github.com/mikecastrodemaria/Quill/wiki/Ollama-CORS" target="_blank">${tr("settingsCorsHelp")}</a></span>`;
             return false;
         }
     } catch (error) {
@@ -174,11 +179,11 @@ const testOllamaConnection = async (ollamaUrl, statusElement) => {
 
 // ============ TEST CLÉ API ANTHROPIC ============
 const testAnthropicKey = async (apiKey, statusElement) => {
-    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+    statusElement.innerHTML = `<span style="color: orange;">${tr("statusTesting")}</span>`;
 
     const result = await checkAnthropicApiKey(apiKey);
     if (result.valid) {
-        statusElement.innerHTML = '<span style="color: #4ade80;">✅ Clé valide</span>';
+        statusElement.innerHTML = `<span style="color: #4ade80;">${tr("statusValidKey")}</span>`;
         return true;
     } else {
         statusElement.innerHTML = `<span style="color: #f87171;">❌ ${result.error}</span>`;
@@ -188,11 +193,11 @@ const testAnthropicKey = async (apiKey, statusElement) => {
 
 // ============ TEST CLÉ API OPENAI ============
 const testOpenAIKey = async (apiKey, statusElement) => {
-    statusElement.innerHTML = '<span style="color: orange;">⏳ Test en cours...</span>';
+    statusElement.innerHTML = `<span style="color: orange;">${tr("statusTesting")}</span>`;
 
     const result = await checkOpenAIApiKey(apiKey);
     if (result.valid) {
-        statusElement.innerHTML = '<span style="color: #4ade80;">✅ Clé valide</span>';
+        statusElement.innerHTML = `<span style="color: #4ade80;">${tr("statusValidKey")}</span>`;
         return true;
     } else {
         statusElement.innerHTML = `<span style="color: #f87171;">❌ ${result.error}</span>`;
@@ -202,7 +207,10 @@ const testOpenAIKey = async (apiKey, statusElement) => {
 
 // ============ SAUVEGARDE ============
 const saveSettings = async (elements, providers) => {
-    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect } = elements;
+    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect, languageSelect } = elements;
+
+    const selectedLanguage = await setLanguage(languageSelect.value);
+    currentLanguage = selectedLanguage;
 
     const actions = Array.from(actionsContainer.children).map(actionDiv => {
         const nameInput = actionDiv.querySelector(".action-name");
@@ -226,7 +234,7 @@ const saveSettings = async (elements, providers) => {
     // Vérifier si le provider actif est enabled
     const activeProvider = activeProviderSelect.value;
     if (!providers[activeProvider].enabled) {
-        alert("Attention : Le provider actif sélectionné n'est pas activé ! Veuillez l'activer ou en choisir un autre.");
+        alert(tr("statusActiveProviderDisabled"));
         return;
     }
 
@@ -235,13 +243,14 @@ const saveSettings = async (elements, providers) => {
         const isConnected = await checkOllamaConnection(providers.ollama.url);
         providers.ollama.connected = isConnected;
         if (!isConnected) {
-            const continueAnyway = confirm("Ollama n'est pas connecté. Voulez-vous sauvegarder quand même ?");
+            const continueAnyway = confirm(tr("statusOllamaNotConnectedConfirm"));
             if (!continueAnyway) return;
         }
     }
 
     await browser.storage.local.set({
         activeProvider: activeProvider,
+        language: selectedLanguage,
         providers: providers,
         actions: actions,
         maxTokens: maxTokensInput.value,
@@ -254,12 +263,12 @@ const saveSettings = async (elements, providers) => {
         ollamaUrl: providers.ollama.url
     });
 
-    alert("Paramètres sauvegardés !");
+    alert(tr("statusSettingsSaved"));
 };
 
 // ============ RÉINITIALISATION ============
 const setDefaultSettings = async (elements) => {
-    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect } = elements;
+    const { actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect, languageSelect } = elements;
 
     while (actionsContainer.firstChild) {
         actionsContainer.firstChild.remove();
@@ -273,6 +282,9 @@ const setDefaultSettings = async (elements) => {
     document.getElementById("ollama-enabled").checked = false;
     document.getElementById("ollama-url").value = "http://localhost:11434";
 
+    const selectedLanguage = await setLanguage(languageSelect.value || "en");
+    currentLanguage = selectedLanguage;
+
     activeProviderSelect.value = "anthropic";
     maxTokensInput.value = 4096;
     maxSizeInput.value = 0;
@@ -282,12 +294,14 @@ const setDefaultSettings = async (elements) => {
     await loadModels(document.getElementById("openai-model"), "openai", defaultProviderModels.openai);
     await loadModels(document.getElementById("ollama-model"), "ollama", defaultProviderModels.ollama);
 
+    const defaultActions = getDefaultActions(selectedLanguage);
     defaultActions.forEach(({ name, prompt }) => {
         addAction(name, prompt, actionsContainer);
     });
 
     await browser.storage.local.set({
         activeProvider: "anthropic",
+        language: selectedLanguage,
         providers: defaultProviders,
         actions: defaultActions,
         maxTokens: 4096,
@@ -300,7 +314,7 @@ const setDefaultSettings = async (elements) => {
         ollamaUrl: "http://localhost:11434"
     });
 
-    alert("Paramètres réinitialisés !");
+    alert(tr("statusSettingsReset"));
 };
 
 // ============ UPDATE ACTIVE PROVIDER OPTIONS ============
@@ -334,13 +348,14 @@ const updateActiveProviderOptions = (providers, activeProviderSelect) => {
     if (activeProviderSelect.options.length === 0) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.text = "-- Activez au moins un provider --";
+        opt.text = tr("providerPlaceholder");
         activeProviderSelect.add(opt);
     }
 };
 
 // ============ INITIALISATION ============
 document.addEventListener("DOMContentLoaded", async () => {
+    currentLanguage = await getLanguage();
     const activeProviderSelect = document.getElementById("active-provider");
     const actionsContainer = document.getElementById("actions-container");
     const addActionButton = document.getElementById("add-action");
@@ -349,6 +364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const maxSizeInput = document.getElementById("max-size");
     const defaultButton = document.getElementById("default-settings");
     const notesContainer = document.getElementById("notes-container");
+    const languageSelect = document.getElementById("language");
 
     // Provider-specific elements
     const anthropicEnabled = document.getElementById("anthropic-enabled");
@@ -373,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await browser.storage.local.get([
         "activeProvider", "providers", "actions", "maxTokens", "promptUpdated", "maxSize",
         // Rétro-compatibilité avec l'ancien format
-        "provider", "model", "apiKey", "ollamaUrl"
+        "provider", "model", "apiKey", "ollamaUrl", "language"
     ]);
 
     let providers = data.providers || { ...defaultProviders };
@@ -400,7 +416,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const maxTokens = data.maxTokens || 4096;
     const maxSize = data.maxSize || 0;
     const promptUpdated = data.promptUpdated || 0;
-    const actions = data.actions || defaultActions;
+    const selectedLanguage = data.language || currentLanguage;
+    languageSelect.value = selectedLanguage;
+    currentLanguage = selectedLanguage;
+
+    const actions = data.actions || getDefaultActions(selectedLanguage);
 
     // Initialiser les inputs
     anthropicEnabled.checked = providers.anthropic.enabled;
@@ -482,11 +502,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     addActionButton.addEventListener("click", () => addAction("", "", actionsContainer));
 
     saveButton.addEventListener("click", () => {
-        saveSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect }, providers);
+        saveSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect, languageSelect }, providers);
     });
 
     defaultButton.addEventListener("click", () => {
-        setDefaultSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect });
+        setDefaultSettings({ actionsContainer, maxTokensInput, maxSizeInput, activeProviderSelect, languageSelect });
+    });
+
+    languageSelect.addEventListener("change", async () => {
+        await setLanguage(languageSelect.value);
+        window.location.reload();
     });
 
     // Test initial Ollama si activé
