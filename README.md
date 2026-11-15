@@ -22,7 +22,7 @@ Quill lets you integrate AI writing assistance (Claude, OpenAI, OVHcloud AI Endp
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.4.1-blue" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="License">
   <img src="https://img.shields.io/badge/thunderbird-78%2B-orange" alt="Thunderbird">
 </p>
@@ -70,7 +70,7 @@ Quill supports **3 AI providers** - choose based on your needs:
 
 ### Method 1: XPI File (Recommended)
 
-1. Download `quill-1.4.0.xpi` from [Releases](https://github.com/mikecastrodemaria/Quill/releases)
+1. Download `quill-1.4.1.xpi` from [Releases](https://github.com/mikecastrodemaria/Quill/releases)
 2. In Thunderbird: **Menu ☰ → Add-ons and Themes** (or `Ctrl+Shift+A`)
 3. Click **⚙️ → Install Add-on From File...**
 4. Select the `.xpi` file and click **Add**

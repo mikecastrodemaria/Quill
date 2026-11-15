@@ -1,4 +1,4 @@
-import { promptVersion, getDefaultActions } from './globals.js';
+import { promptVersion, localizeActions } from './globals.js';
 import { getLanguage, t, applyI18n } from './i18n.js';
 import { PROVIDERS, loadProviderState, setActiveProvider } from './providers.js';
 
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { actions, promptUpdated = 0 } = await browser.storage.local.get(["actions", "promptUpdated"]);
     const container = document.getElementById("actions-container");
-    for (const action of (actions?.length ? actions : getDefaultActions(language))) {
+    for (const action of localizeActions(actions, language)) {
         const item = document.createElement("button");
         item.className = "menu-item";
         item.textContent = action.name;
@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const settingsLink = document.getElementById("settings-link");
-    if (promptVersion > promptUpdated) {
+    if (actions && promptVersion > promptUpdated) {
         const dot = document.createElement("span");
         dot.className = "dot";
         dot.title = t(language, "actionsNewPrompts");
