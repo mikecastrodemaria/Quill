@@ -2,6 +2,21 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.4.1] - 2026-11-15
+
+### Ajouté
+- **Six nouvelles langues d'interface** : Deutsch, Español, Italiano, Português, Nederlands, Polski (en plus de English et Français). Pré-traductions à faire relire par des locuteurs natifs
+- Actions par défaut et prompt du chat traduits dans chaque langue
+- Description de l'extension traduite dans le gestionnaire de modules (`_locales`)
+
+### Modifié
+- Sans choix explicite, Quill suit la langue de Thunderbird au lieu de toujours démarrer en anglais
+- Les actions par défaut non modifiées suivent la langue de l'interface (corrige les menus restés en français, issue #1). Les actions personnalisées ne sont jamais touchées
+- Un fichier par langue dans `plugin/html/locales/`
+
+### Corrigé
+- L'avertissement « nouveaux prompts disponibles » s'affichait sur une installation neuve
+
 ## [1.4.0] - 2026-11-15
 
 ### Ajouté

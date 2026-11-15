@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.4.1-blue" alt="Version">
   <img src="https://img.shields.io/badge/licence-GPL--3.0-green" alt="Licence">
   <img src="https://img.shields.io/badge/thunderbird-78%2B-orange" alt="Thunderbird">
 </p>
@@ -67,7 +67,7 @@ Quill supporte **3 providers IA** - choisissez selon vos besoins :
 
 ### Méthode 1 : Fichier XPI (Recommandé)
 
-1. Téléchargez `quill-1.4.0.xpi` depuis les [Releases](https://github.com/mikecastrodemaria/Quill/releases)
+1. Téléchargez `quill-1.4.1.xpi` depuis les [Releases](https://github.com/mikecastrodemaria/Quill/releases)
 2. Dans Thunderbird : **Menu ☰ → Modules et thèmes** (ou `Ctrl+Maj+A`)
 3. Cliquez sur **⚙️ → Installer un module depuis un fichier...**
 4. Sélectionnez le fichier `.xpi` et cliquez sur **Ajouter**

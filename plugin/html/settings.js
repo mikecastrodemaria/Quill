@@ -1,6 +1,6 @@
 import { fetchProviderModels, testProvider } from './API.js';
-import { promptVersion, getDefaultActions } from './globals.js';
-import { getLanguage, t, applyI18n, formatError } from './i18n.js';
+import { promptVersion, getDefaultActions, isDefaultActions, localizeActions } from './globals.js';
+import { getLanguage, t, applyI18n, formatError, LANGUAGES } from './i18n.js';
 import { PROVIDERS, PROVIDER_IDS, defaultProviders, normalizeProviders } from './providers.js';
 
 let language = "en";
@@ -181,14 +181,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     updateActiveOptions(data.activeProvider || data.provider || "anthropic");
 
+    languageSelect.replaceChildren(...LANGUAGES.map(({ id, name }) => new Option(name, id)));
     languageSelect.value = language;
     maxTokensInput.value = String(parseInt(data.maxTokens, 10) || 4096);
     if (!maxTokensInput.value) maxTokensInput.value = "4096";
     maxSizeInput.value = parseInt(data.maxSize, 10) || 0;
-    (data.actions?.length ? data.actions : getDefaultActions(language))
+    localizeActions(data.actions, language)
         .forEach(({ name, prompt }) => addAction(name, prompt, actionsContainer));
 
-    notice.hidden = promptVersion <= (data.promptUpdated || 0);
+    notice.hidden = !data.actions || promptVersion <= (data.promptUpdated || 0);
     document.getElementById("prompt-notice-ignore").addEventListener("click", async () => {
         await browser.storage.local.set({ promptUpdated: promptVersion });
         notice.hidden = true;
@@ -201,6 +202,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (providers[id].enabled && canQuery(id, providers[id])) refreshModels(id, { silent: true });
     }
 
+    const readActions = () => Array.from(actionsContainer.children)
+        .map(row => ({
+            name: row.querySelector(".action-name").value.trim(),
+            prompt: row.querySelector(".action-prompt").value
+        }))
+        .filter(action => action.name);
+
     // ---- Dirty tracking ----
     const markDirty = () => {
         saveStatus.className = "status";
@@ -211,6 +219,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     languageSelect.addEventListener("change", () => {
         language = languageSelect.value;
+        // Untouched default actions follow the interface language.
+        if (isDefaultActions(readActions())) {
+            actionsContainer.replaceChildren();
+            getDefaultActions(language).forEach(({ name, prompt }) => addAction(name, prompt, actionsContainer));
+        }
         applyI18n(language);
         updateActiveOptions();
         markDirty();
@@ -238,12 +251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const toSave = {};
         for (const id of PROVIDER_IDS) toSave[id] = readCard(id);
 
-        const actions = Array.from(actionsContainer.children)
-            .map(row => ({
-                name: row.querySelector(".action-name").value.trim(),
-                prompt: row.querySelector(".action-prompt").value
-            }))
-            .filter(action => action.name);
+        const actions = readActions();
 
         await browser.storage.local.set({
             activeProvider: activeSelect.value,
