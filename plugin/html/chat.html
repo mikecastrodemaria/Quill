@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <title>Quill Chat</title>
-    <link rel="stylesheet" type="text/css" media="screen" href="chat.css">
-    <link rel="stylesheet" type="text/css" media="screen" href="styles.css">
-</head>
-<body>
-    <div class="chat-container">
-        <div id="messages" class="messages">
-            <!-- Chat messages are appended dynamically -->
-        </div>
-        <div class="chat-input-area">
-            <textarea id="message-input" placeholder="Write your message here..."></textarea>
-            <button id="send-button" class="button good">Send</button>
-        </div>
-    </div>
-    <script type="module" src="chat.js"></script>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>Quill Chat</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body class="window">
+        <header class="window-header">
+            <h1 data-i18n="chatTitle">Quill Chat</h1>
+            <span class="chip" id="chat-model"></span>
+        </header>
+        <main class="window-body">
+            <div id="messages" class="messages"></div>
+        </main>
+        <footer class="window-footer chat-input">
+            <textarea id="message-input" data-i18n-placeholder="chatPlaceholder"></textarea>
+            <button id="send-button" class="btn primary" data-i18n="chatSend">Send</button>
+        </footer>
+        <script type="module" src="chat.js"></script>
+    </body>
 </html>

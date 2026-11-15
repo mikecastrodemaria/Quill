@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.4.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/licence-GPL--3.0-green" alt="Licence">
   <img src="https://img.shields.io/badge/thunderbird-78%2B-orange" alt="Thunderbird">
 </p>
@@ -58,6 +58,7 @@ Quill supporte **3 providers IA** - choisissez selon vos besoins :
 |----------|------|-----------------|---------|------------|
 | 🟠 **Anthropic (Claude)** | À l'usage | Cloud | Rapide | Meilleure qualité |
 | 🟢 **OpenAI (GPT)** | À l'usage | Cloud | Rapide | Large écosystème |
+| 🔷 **OVHcloud AI Endpoints** | À l'usage (accès anonyme gratuit limité) | Cloud (UE) | Rapide | Hébergement européen, modèles ouverts |
 | 🔵 **Ollama (Local)** | **Gratuit** | **100% Local** | Variable | Confidentialité |
 
 ---
@@ -66,7 +67,7 @@ Quill supporte **3 providers IA** - choisissez selon vos besoins :
 
 ### Méthode 1 : Fichier XPI (Recommandé)
 
-1. Téléchargez `quill-1.2.0.xpi` depuis les [Releases](https://github.com/mikecastrodemaria/Quill/releases)
+1. Téléchargez `quill-1.4.0.xpi` depuis les [Releases](https://github.com/mikecastrodemaria/Quill/releases)
 2. Dans Thunderbird : **Menu ☰ → Modules et thèmes** (ou `Ctrl+Maj+A`)
 3. Cliquez sur **⚙️ → Installer un module depuis un fichier...**
 4. Sélectionnez le fichier `.xpi` et cliquez sur **Ajouter**

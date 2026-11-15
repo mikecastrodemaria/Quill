@@ -2,7 +2,7 @@
 
   const makeParagraphs = (text, func) => {
     const chunks = text.split(/\n{2,}/);
-    if (chunks.length == 1) {
+    if (chunks.length == 1 && !/\n/.test(text)) {
       return func(document.createTextNode(text));
     }
     const paragraphs = chunks.map((t) => {

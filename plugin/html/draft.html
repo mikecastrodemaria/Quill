@@ -3,17 +3,21 @@
     <head>
         <meta charset="UTF-8">
         <title>Quill</title>
-        <link rel="stylesheet" type="text/css" media="screen" href="styles.css">
+        <link rel="stylesheet" href="styles.css">
         <script type="module" src="draft.js"></script>
     </head>
-    <body class="draft-page">
-        <main id="draft-container">
-
-        </main>
-        <div class="btns">
-            <button id="insert-button" class="button neutral">Insert</button><br/>
-            <button id="chat-button" class="button neutral">Convert to chat</button><br/>
-            <button id="regenerate" value="Regenerate" class="button bad">Regenerate</button><br/>
-        </div>
+    <body class="window">
+        <header class="window-header">
+            <h1 id="draft-title">Quill</h1>
+            <span class="chip" id="draft-model"></span>
+        </header>
+        <main class="window-body" id="draft-container"></main>
+        <footer class="window-footer">
+            <button id="regenerate" class="btn" data-i18n="draftRegenerate">Regenerate</button>
+            <button id="chat-button" class="btn" data-i18n="draftToChat">Continue in chat</button>
+            <span class="spacer"></span>
+            <button id="copy-button" class="btn" data-i18n="draftCopy">Copy</button>
+            <button id="insert-button" class="btn primary" data-i18n="draftInsert">Insert</button>
+        </footer>
     </body>
 </html>

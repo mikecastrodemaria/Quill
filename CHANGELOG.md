@@ -2,6 +2,31 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.4.0] - 2026-11-15
+
+### Ajouté
+- **OVHcloud AI Endpoints** : nouveau fournisseur (API compatible OpenAI, hébergée en Europe). URL configurable, clé API facultative (accès anonyme limité), liste des modèles de chat chargée en direct
+- Changement rapide de fournisseur depuis le menu Quill
+- Listes de modèles chargées en direct pour Anthropic et OpenAI (bouton d'actualisation), avec liste de secours
+- Bouton **Copier** dans la fenêtre de brouillon, envoi par Entrée dans le chat
+- Bouton **Restaurer les actions par défaut**
+
+### Modifié
+- **Nouvelle interface** : menu, brouillon, chat et paramètres redessinés, plus compacts, et qui suivent le thème clair/sombre de Thunderbird
+- La page des paramètres est entièrement traduite (EN/FR) et la langue change sans recharger la page
+- Modèles Claude par défaut mis à jour ; le modèle déjà choisi est conservé à la mise à jour
+- OpenAI : utilisation de `max_completion_tokens` (requis par les modèles récents)
+- Messages d'erreur lisibles (clé invalide, limite de requêtes, serveur injoignable, délai dépassé)
+
+### Corrigé
+- « Paramètres » s'ouvrait dans le popup au lieu d'un onglet ; « Chat » s'ouvre dans sa propre fenêtre
+- Le menu plantait à la première utilisation si les paramètres n'avaient jamais été enregistrés
+- Le test de clé Anthropic reposait sur un ancien modèle et exigeait le préfixe `sk-ant-`
+- « Régénérer » renvoyait la réponse précédente au modèle
+- « Insérer » pouvait insérer un message d'erreur ; les sauts de ligne simples étaient perdus à l'insertion
+- Le raisonnement interne (`<think>`) de certains modèles n'est plus inséré dans l'e-mail
+- Les anciennes clés de stockage (copie de la clé API) sont supprimées à l'enregistrement
+
 ## [1.2.0] - 2026-02-06
 
 ### Ajouté

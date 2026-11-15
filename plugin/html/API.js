@@ -1,322 +1,206 @@
-// Quill - API Multi-Provider (Anthropic Claude + OpenAI + Ollama)
-// Supporte les trois APIs avec détection automatique
+// Quill - Multi-provider API layer
+// Anthropic (Claude), OpenAI, OVHcloud AI Endpoints (OpenAI-compatible), Ollama
 
-// ============ OLLAMA (Local) ============
-const fetchOllamaResponse = async (model, messages, ollamaUrl = "http://localhost:11434") => {
-    // Ollama utilise un format similaire à OpenAI
-    const ollamaMessages = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-    }));
+import { PROVIDERS, OLLAMA_DEFAULT_URL, OVH_DEFAULT_URL } from './providers.js';
 
-    const requestBody = {
-        model: model,
-        messages: ollamaMessages,
-        stream: false
+const GENERATE_TIMEOUT = 180000;
+const LIST_TIMEOUT = 10000;
+
+// kind: auth | rate | network | timeout | empty | http
+export class QuillError extends Error {
+    constructor(kind, provider, detail = "", status = 0) {
+        super(detail || kind);
+        this.kind = kind;
+        this.provider = provider;
+        this.status = status;
+    }
+}
+
+const trimUrl = (url, fallback) => (url || fallback).trim().replace(/\/+$/, "");
+
+const request = async (provider, url, options = {}, timeout = GENERATE_TIMEOUT) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    let response;
+    try {
+        response = await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+        if (error.name === "AbortError") throw new QuillError("timeout", provider);
+        throw new QuillError("network", provider, error.message);
+    } finally {
+        clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+        let detail = await response.text().catch(() => "");
+        try {
+            const json = JSON.parse(detail);
+            const err = json.error;
+            detail = (typeof err === "string" ? err : err?.message) || json.message || detail;
+        } catch { /* plain text body */ }
+        detail = String(detail).slice(0, 300);
+        const kind = response.status === 401 || response.status === 403 ? "auth"
+            : response.status === 429 ? "rate" : "http";
+        throw new QuillError(kind, provider, detail, response.status);
+    }
+    return response.json();
+};
+
+// Reasoning models sometimes inline their scratchpad; never put that in an email.
+const cleanText = (text) => String(text || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+const jsonHeaders = (apiKey) => {
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+    return headers;
+};
+
+const anthropicHeaders = (apiKey) => ({
+    "Content-Type": "application/json",
+    "x-api-key": apiKey,
+    "anthropic-version": "2023-06-01",
+    "anthropic-dangerous-direct-browser-access": "true"
+});
+
+// ============ GENERATION ============
+
+const generateAnthropic = async ({ apiKey, model, maxTokens }, messages) => {
+    const system = messages.filter(m => m.role === "system").map(m => m.content).join("\n\n");
+    const body = {
+        model,
+        max_tokens: maxTokens > 0 ? maxTokens : 4096,
+        messages: messages.filter(m => m.role !== "system").map(({ role, content }) => ({ role, content }))
     };
+    if (system) body.system = system;
 
-    const response = await fetch(`${ollamaUrl}/api/chat`, {
+    const data = await request("anthropic", "https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
+        headers: anthropicHeaders(apiKey),
+        body: JSON.stringify(body)
     });
-
-    if (!response.ok) {
-        const errorDetail = await response.text();
-        throw new Error(`Ollama error: ${response.status}, ${errorDetail}`);
-    }
-
-    const responseData = await response.json();
-
-    if (responseData.message && responseData.message.content) {
-        return responseData.message.content;
-    }
-
-    throw new Error("No response from Ollama");
+    return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
 };
 
-// ============ OLLAMA - Check Connection ============
-export const checkOllamaConnection = async (ollamaUrl = "http://localhost:11434") => {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+// tokenParam differs: OpenAI's recent models only accept max_completion_tokens,
+// while most OpenAI-compatible servers (OVHcloud, vLLM...) expect max_tokens.
+const generateOpenAICompatible = async (provider, baseUrl, tokenParam, { apiKey, model, maxTokens }, messages) => {
+    const body = { model, messages: messages.map(({ role, content }) => ({ role, content })) };
+    if (maxTokens > 0) body[tokenParam] = maxTokens;
 
-        const response = await fetch(`${ollamaUrl}/api/tags`, {
-            method: "GET",
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-        return response.ok;
-    } catch (error) {
-        console.error("Ollama connection check failed:", error);
-        return false;
-    }
-};
-
-// ============ OLLAMA - Fetch Models ============
-export const fetchOllamaModels = async (ollamaUrl = "http://localhost:11434") => {
-    try {
-        const response = await fetch(`${ollamaUrl}/api/tags`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch Ollama models: ${response.status}`);
-        }
-
-        const data = await response.json();
-        // Convertir au format attendu
-        return {
-            data: data.models ? data.models.map(m => ({ id: m.name })) : []
-        };
-    } catch (error) {
-        console.error("Ollama fetch models error:", error);
-        // Retourner une liste vide si Ollama n'est pas disponible
-        return { data: [] };
-    }
-};
-
-// ============ ANTHROPIC (Claude) ============
-const fetchAnthropicResponse = async (apiKey, model, messages, maxTokens) => {
-    let systemPrompt = "";
-    const anthropicMessages = [];
-
-    for (const msg of messages) {
-        if (msg.role === "system") {
-            systemPrompt = msg.content;
-        } else {
-            anthropicMessages.push({
-                role: msg.role,
-                content: msg.content
-            });
-        }
-    }
-
-    if (anthropicMessages.length === 0) {
-        throw new Error("No user message provided");
-    }
-
-    const requestBody = {
-        model: model,
-        max_tokens: maxTokens > 0 ? parseInt(maxTokens) : 4096,
-        messages: anthropicMessages
-    };
-
-    if (systemPrompt) {
-        requestBody.system = systemPrompt;
-    }
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const data = await request(provider, `${baseUrl}/chat/completions`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true"
-        },
-        body: JSON.stringify(requestBody)
+        headers: jsonHeaders(apiKey),
+        body: JSON.stringify(body)
     });
-
-    if (!response.ok) {
-        const errorDetail = await response.text();
-        throw new Error(`Anthropic API error: ${response.status}, ${errorDetail}`);
-    }
-
-    const responseData = await response.json();
-
-    if (responseData.content && responseData.content.length > 0) {
-        return responseData.content[0].text;
-    }
-
-    throw new Error("No response from Claude");
+    return data.choices?.[0]?.message?.content;
 };
 
-// ============ OPENAI ============
-const fetchOpenAIResponse = async (apiKey, model, messages, maxTokens) => {
-    const requestBody = {
-        model: model,
-        messages: messages
-    };
-
-    if (maxTokens > 0) {
-        requestBody.max_tokens = parseInt(maxTokens);
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+const generateOllama = async ({ url, model }, messages) => {
+    const data = await request("ollama", `${trimUrl(url, OLLAMA_DEFAULT_URL)}/api/chat`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model,
+            messages: messages.map(({ role, content }) => ({ role, content })),
+            stream: false
+        })
     });
-
-    if (!response.ok) {
-        const errorDetail = await response.text();
-        throw new Error(`OpenAI API error: ${response.status}, ${errorDetail}`);
-    }
-
-    const responseData = await response.json();
-    return responseData.choices[0].message.content;
+    return data.message?.content;
 };
 
-// ============ OPENAI - Fetch Models ============
-export const fetchOpenAIModels = async (apiKey) => {
-    const response = await fetch("https://api.openai.com/v1/models", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.status}`);
+// config comes from getActiveProviderConfig() in providers.js
+export const fetchResponse = async (config, messages) => {
+    const { provider } = config;
+    if (!PROVIDERS[provider]) throw new QuillError("http", provider, `Unknown provider: ${provider}`);
+    if (!PROVIDERS[provider].noKey && !PROVIDERS[provider].keyOptional && !config.apiKey) {
+        throw new QuillError("nokey", provider);
     }
 
-    return await response.json();
-};
-
-// ============ ANTHROPIC - Check API Key ============
-export const checkAnthropicApiKey = async (apiKey) => {
-    if (!apiKey || !apiKey.startsWith("sk-ant-")) {
-        return { valid: false, error: "Clé API invalide (doit commencer par sk-ant-)" };
-    }
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        // Test avec une requête minimale
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey,
-                "anthropic-version": "2023-06-01",
-                "anthropic-dangerous-direct-browser-access": "true"
-            },
-            body: JSON.stringify({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 1,
-                messages: [{ role: "user", content: "Hi" }]
-            }),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            return { valid: true };
-        } else if (response.status === 401) {
-            return { valid: false, error: "Clé API invalide ou expirée" };
-        } else if (response.status === 403) {
-            return { valid: false, error: "Accès refusé - vérifiez les permissions" };
-        } else {
-            const data = await response.json().catch(() => ({}));
-            return { valid: false, error: data.error?.message || `Erreur ${response.status}` };
-        }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            return { valid: false, error: "Timeout - vérifiez votre connexion" };
-        }
-        return { valid: false, error: error.message };
-    }
-};
-
-// ============ OPENAI - Check API Key ============
-export const checkOpenAIApiKey = async (apiKey) => {
-    if (!apiKey) {
-        return { valid: false, error: "Clé API manquante" };
-    }
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        // Test avec l'endpoint models (léger)
-        const response = await fetch("https://api.openai.com/v1/models", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`
-            },
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            return { valid: true };
-        } else if (response.status === 401) {
-            return { valid: false, error: "Clé API invalide ou expirée" };
-        } else if (response.status === 403) {
-            return { valid: false, error: "Accès refusé - vérifiez les permissions" };
-        } else if (response.status === 429) {
-            return { valid: false, error: "Rate limit atteint - réessayez plus tard" };
-        } else {
-            const data = await response.json().catch(() => ({}));
-            return { valid: false, error: data.error?.message || `Erreur ${response.status}` };
-        }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            return { valid: false, error: "Timeout - vérifiez votre connexion" };
-        }
-        return { valid: false, error: error.message };
-    }
-};
-
-// ============ DÉTECTION AUTO DU PROVIDER ============
-const detectProvider = (apiKey) => {
-    if (!apiKey) return null;
-    if (apiKey.startsWith("sk-ant-")) {
-        return "anthropic";
-    } else if (apiKey.startsWith("sk-proj-") || apiKey.startsWith("sk-")) {
-        return "openai";
-    }
-    return null;
-};
-
-// ============ EXPORTS PRINCIPAUX ============
-export const fetchModels = async (apiKey) => {
-    // Retourne une liste statique (Anthropic n'a pas d'API models)
-    return {
-        data: [
-            { id: "claude-sonnet-4-5-20250929" },
-            { id: "claude-3-5-sonnet-20241022" },
-            { id: "claude-3-5-haiku-20241022" },
-            { id: "claude-3-opus-20240229" }
-        ]
-    };
-};
-
-export const fetchResponse = async (apiKey, model, messages, maxTokens, provider = null, ollamaUrl = "http://localhost:11434") => {
-    // Le provider explicite a priorité sur la détection auto
-    let activeProvider = provider;
-
-    // Si pas de provider explicite, détecte via le modèle ou la clé
-    if (!activeProvider) {
-        if (model && model.startsWith("claude")) {
-            activeProvider = "anthropic";
-        } else if (model && (model.startsWith("gpt") || model.startsWith("o1"))) {
-            activeProvider = "openai";
-        } else {
-            activeProvider = detectProvider(apiKey);
-        }
-    }
-
-    console.log("Quill: Using provider:", activeProvider, "Model:", model);
-
-    if (activeProvider === "anthropic") {
-        return fetchAnthropicResponse(apiKey, model, messages, maxTokens);
-    } else if (activeProvider === "ollama") {
-        return fetchOllamaResponse(model, messages, ollamaUrl);
+    let text;
+    if (provider === "anthropic") {
+        text = await generateAnthropic(config, messages);
+    } else if (provider === "ollama") {
+        text = await generateOllama(config, messages);
+    } else if (provider === "ovh") {
+        text = await generateOpenAICompatible("ovh", trimUrl(config.url, OVH_DEFAULT_URL), "max_tokens", config, messages);
     } else {
-        return fetchOpenAIResponse(apiKey, model, messages, maxTokens);
+        text = await generateOpenAICompatible("openai", "https://api.openai.com/v1", "max_completion_tokens", config, messages);
     }
+
+    text = cleanText(text);
+    if (!text) throw new QuillError("empty", provider);
+    return text;
+};
+
+// ============ MODEL LISTS ============
+// Each returns [{ id, name }] and throws a QuillError on failure.
+
+const NON_CHAT = /embed|whisper|tts|audio|realtime|transcri|dall-e|image|moderation|guard|rerank|stable-diffusion|bge-|search|instruct$|^babbage|^davinci|sora|codex/i;
+
+const listAnthropic = async ({ apiKey }) => {
+    const data = await request("anthropic", "https://api.anthropic.com/v1/models?limit=100", {
+        headers: anthropicHeaders(apiKey)
+    }, LIST_TIMEOUT);
+    return (data.data || []).map(m => ({ id: m.id, name: m.display_name || m.id }));
+};
+
+const listOpenAI = async ({ apiKey }) => {
+    const data = await request("openai", "https://api.openai.com/v1/models", {
+        headers: jsonHeaders(apiKey)
+    }, LIST_TIMEOUT);
+    return (data.data || [])
+        .filter(m => /^(gpt|o\d|chatgpt)/i.test(m.id) && !NON_CHAT.test(m.id))
+        .sort((a, b) => (b.created || 0) - (a.created || 0))
+        .map(m => ({ id: m.id, name: m.id }));
+};
+
+// The OVHcloud catalogue mixes chat, embedding, speech and image models.
+// Chat models are the ones that advertise an output token budget.
+const listOvh = async ({ apiKey, url }) => {
+    const data = await request("ovh", `${trimUrl(url, OVH_DEFAULT_URL)}/models`, {
+        headers: jsonHeaders(apiKey)
+    }, LIST_TIMEOUT);
+    const list = Array.isArray(data) ? data : (data.data || []);
+    const hasBudget = list.some(m => typeof m.max_completion_tokens === "number");
+    return list
+        .filter(m => typeof m.id === "string")
+        .filter(m => !/guard|embed|whisper|tts|stable-diffusion|^bge-/i.test(m.id))
+        .filter(m => !hasBudget || m.max_completion_tokens > 0)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map(m => ({ id: m.id, name: m.owned_by ? `${m.id} · ${m.owned_by}` : m.id }));
+};
+
+const listOllama = async ({ url }) => {
+    const data = await request("ollama", `${trimUrl(url, OLLAMA_DEFAULT_URL)}/api/tags`, {}, LIST_TIMEOUT);
+    return (data.models || []).map(m => ({ id: m.name, name: m.name }));
+};
+
+export const fetchProviderModels = (provider, config) => {
+    if (provider === "anthropic") return listAnthropic(config);
+    if (provider === "openai") return listOpenAI(config);
+    if (provider === "ovh") return listOvh(config);
+    return listOllama(config);
+};
+
+// ============ CONNECTION TEST ============
+// Resolves with the live model list when credentials work, throws otherwise.
+
+export const testProvider = async (provider, config) => {
+    const def = PROVIDERS[provider];
+    if (!def.noKey && !def.keyOptional && !config.apiKey) throw new QuillError("nokey", provider);
+
+    const models = await fetchProviderModels(provider, config);
+
+    // OVHcloud's model list is public, so only a real (1-token) call proves the key.
+    if (provider === "ovh" && config.apiKey) {
+        const model = models.some(m => m.id === config.model) ? config.model : models[0]?.id;
+        if (model) {
+            await request("ovh", `${trimUrl(config.url, OVH_DEFAULT_URL)}/chat/completions`, {
+                method: "POST",
+                headers: jsonHeaders(config.apiKey),
+                body: JSON.stringify({ model, messages: [{ role: "user", content: "Hi" }], max_tokens: 1 })
+            }, 30000);
+        }
+    }
+    return models;
 };

@@ -1,65 +1,78 @@
-import { promptVersion } from './globals.js';
-import { getLanguage, t } from './i18n.js';
+import { promptVersion, getDefaultActions } from './globals.js';
+import { getLanguage, t, applyI18n } from './i18n.js';
+import { PROVIDERS, loadProviderState, setActiveProvider } from './providers.js';
 
 const truncate = async (text) => {
-    const { maxSize } = await browser.storage.local.get(
-        ["maxSize"]);
+    const { maxSize } = await browser.storage.local.get(["maxSize"]);
     const max = parseInt(maxSize, 10);
-    if (isNaN(max) || max <= 0) {
-        return text;
-    }
-    const ret = text.substring(0, Math.min(text.length, max));
-    return ret;
-}
+    return (isNaN(max) || max <= 0) ? text : text.substring(0, max);
+};
 
+const openWindow = (url, height) =>
+    browser.windows.create({ url, type: "popup", width: 620, height });
 
-const addAction = (name, prompt, actionsContainer) => {
-    const actionDiv = document.createElement("div");
-    const nameInput = document.createElement("p");
-    nameInput.classList.add("flat");
-    nameInput.innerText = name;
-    nameInput.classList.add("action-name");
-
-    const getHighlight = async () => {
-        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-        return {tabId: tabs[0].id,
-            selection: await browser.tabs.sendMessage(tabs[0].id, { command: "getSelectedText" }),
-            text: await browser.tabs.sendMessage(tabs[0].id, { command: "getText" })
-        };
-    };
-
-    nameInput.onclick = async () => {
-        const hl = await getHighlight();
-        const messages = [{role: "system", content: prompt}];
-        if (hl.selection) {
-            messages.push({role: "user", content: await truncate(hl.selection)});
-        } else {
-            messages.push({role: "user", content: await truncate(hl.text)});
-        }
-        browser.storage.local.set({ messages, draftTitle: name, tabId: hl.tabId }).then( () => {
-            browser.windows.create({ url: "/html/draft.html", type: "popup",
-                        width: 600, height: 512 });
-        });
-    };
-    actionDiv.appendChild(nameInput);
-    actionsContainer.appendChild(actionDiv);
+const runAction = async ({ name, prompt }) => {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    const selection = await browser.tabs.sendMessage(tab.id, { command: "getSelectedText" });
+    const text = selection || await browser.tabs.sendMessage(tab.id, { command: "getText" });
+    const messages = [
+        { role: "system", content: prompt },
+        { role: "user", content: await truncate(text) }
+    ];
+    await browser.storage.local.set({ messages, draftTitle: name, tabId: tab.id });
+    await openWindow("/html/draft.html", 520);
+    window.close();
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const actionsContainer = document.getElementById("actions-container");
     const language = await getLanguage();
-    document.getElementById('chat-link').innerText = t(language, 'actionsChatLink');
-    document.getElementById('settings-link').innerText = t(language, 'actionsSettingsLink');
+    applyI18n(language);
 
-    browser.storage.local.get(["actions", "promptUpdated"], (data) => {
-        const { actions, promptUpdated = 0 } = data;
-        if (promptVersion > promptUpdated) {
-            const warningIcon = document.createElement('img');
-            warningIcon.src = "/images/warning.png";
-            warningIcon.classList.add('small-icon');
-            const settingsLink = document.getElementById('settings-link');
-            settingsLink.appendChild(warningIcon);
-        };
-        actions.forEach((action) => {addAction(action.name, action.prompt, actionsContainer)});
+    const { actions, promptUpdated = 0 } = await browser.storage.local.get(["actions", "promptUpdated"]);
+    const container = document.getElementById("actions-container");
+    for (const action of (actions?.length ? actions : getDefaultActions(language))) {
+        const item = document.createElement("button");
+        item.className = "menu-item";
+        item.textContent = action.name;
+        item.addEventListener("click", () => runAction(action));
+        container.appendChild(item);
+    }
+
+    // Quick provider switch
+    const { providers, enabled, active } = await loadProviderState();
+    const select = document.getElementById("provider-select");
+    if (enabled.length === 0) {
+        const note = document.getElementById("provider-note");
+        note.textContent = t(language, "actionsNoProvider");
+        note.hidden = false;
+    } else {
+        for (const id of enabled) {
+            select.add(new Option(PROVIDERS[id].short, id));
+        }
+        select.value = active;
+        select.title = providers[active].model;
+        select.addEventListener("change", async () => {
+            await setActiveProvider(select.value);
+            select.title = providers[select.value].model;
+        });
+        document.getElementById("provider-row").hidden = false;
+    }
+
+    document.getElementById("chat-link").addEventListener("click", async () => {
+        await browser.storage.local.set({ messages: [], draftTitle: "" });
+        await openWindow("/html/chat.html", 600);
+        window.close();
+    });
+
+    const settingsLink = document.getElementById("settings-link");
+    if (promptVersion > promptUpdated) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        dot.title = t(language, "actionsNewPrompts");
+        settingsLink.appendChild(dot);
+    }
+    settingsLink.addEventListener("click", async () => {
+        await browser.runtime.openOptionsPage();
+        window.close();
     });
 });
