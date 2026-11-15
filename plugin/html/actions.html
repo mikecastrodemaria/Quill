@@ -2,14 +2,19 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Actions</title>
-        <link rel="stylesheet" type="text/css" media="screen" href="styles.css">
+        <title>Quill</title>
+        <link rel="stylesheet" href="styles.css">
     </head>
-    <body>
+    <body class="popup">
         <div id="actions-container"></div>
-        <hr>
-        <a href="/html/chat.html" class="flat" id="chat-link">Chat</a><br/><br/>
-        <a href="/html/settings.html" class="flat" id="settings-link">Settings</a>
+        <div class="menu-sep"></div>
+        <div class="menu-provider" id="provider-row" hidden>
+            <label for="provider-select" data-i18n="actionsProvider">Provider</label>
+            <select id="provider-select"></select>
+        </div>
+        <div class="menu-note" id="provider-note" hidden></div>
+        <button class="menu-item" id="chat-link" data-i18n="actionsChatLink">Chat</button>
+        <button class="menu-item" id="settings-link"><span data-i18n="actionsSettingsLink">Settings</span></button>
         <script type="module" src="actions.js"></script>
     </body>
 </html>

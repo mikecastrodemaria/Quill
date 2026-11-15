@@ -49,10 +49,10 @@ Fork of [Aify](https://github.com/ali-raheem/Aify) by Ali Raheem.
 
 ### Method 1: XPI File (Recommended)
 
-1. Download the `quill-1.2.0.xpi` file from [Releases](https://github.com/mikecastrodemaria/Quill/releases)
+1. Download the `quill-1.4.0.xpi` file from [Releases](https://github.com/mikecastrodemaria/Quill/releases)
 2. In Thunderbird, go to Menu ☰ → Add-ons and Themes (or `Ctrl+Shift+A`)
 3. Click the gear icon ⚙️ → Install Add-on From File...
-4. Select the `quill-1.2.0.xpi` file
+4. Select the `quill-1.4.0.xpi` file
 5. Click Add to confirm the installation
 
 ### Method 2: Manual Installation (Developers)

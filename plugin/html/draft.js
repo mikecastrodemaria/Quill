@@ -1,80 +1,89 @@
 import { fetchResponse } from './API.js';
-import { getLanguage, t } from './i18n.js';
-
-// Helper pour récupérer la config du provider actif (compatible ancien/nouveau format)
-async function getActiveProviderConfig() {
-    const data = await browser.storage.local.get([
-        "activeProvider", "providers",
-        // Rétro-compatibilité
-        "apiKey", "model", "maxTokens", "provider", "ollamaUrl"
-    ]);
-
-    // Nouveau format
-    if (data.providers && data.activeProvider) {
-        const provider = data.activeProvider;
-        const config = data.providers[provider];
-        return {
-            provider: provider,
-            apiKey: config.apiKey || "",
-            model: config.model,
-            maxTokens: data.maxTokens || 4096,
-            ollamaUrl: data.providers.ollama?.url || "http://localhost:11434"
-        };
-    }
-
-    // Ancien format (rétro-compatibilité)
-    return {
-        provider: data.provider || "anthropic",
-        apiKey: data.apiKey || "",
-        model: data.model,
-        maxTokens: data.maxTokens || 4096,
-        ollamaUrl: data.ollamaUrl || "http://localhost:11434"
-    };
-}
-
-async function generate(draftContainer, messages, draftTitle, language) {
-    const loadingIcon = document.createElement("img");
-    loadingIcon.src = "/images/loading.png";
-    loadingIcon.classList.add("rotate");
-
-    draftContainer.textContent = "";
-    draftContainer.appendChild(loadingIcon);
-
-    try {
-        const { apiKey, model, maxTokens, provider, ollamaUrl } = await getActiveProviderConfig();
-        const response = await fetchResponse(apiKey, model, messages, maxTokens, provider, ollamaUrl);
-        draftContainer.innerText = response;
-        messages.push({role: "assistant", content: response});
-        document.title = draftTitle;
-        await browser.storage.local.set({messages});
-    } catch (error) {
-        console.error("Quill Error:", error);
-        draftContainer.textContent = `${t(language, "errorPrefix")} ${error.message}`;
-    }
-}
+import { getLanguage, t, applyI18n, formatError } from './i18n.js';
+import { getActiveProviderConfig } from './providers.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
     const language = await getLanguage();
-    const regenButton = document.getElementById('regenerate');
-    const chatButton = document.getElementById('chat-button');
-    const insertButton = document.getElementById('insert-button');
-    const draftContainer = document.getElementById("draft-container");
+    applyI18n(language);
 
-    insertButton.innerText = t(language, "draftInsert");
-    chatButton.innerText = t(language, "draftToChat");
-    regenButton.innerText = t(language, "draftRegenerate");
-    const { messages, draftTitle, tabId } = await browser.storage.local.get(["messages", "draftTitle", "tabId"]);
-    regenButton.addEventListener("click", () => generate(draftContainer, messages, draftTitle, language));
+    const container = document.getElementById("draft-container");
+    const modelChip = document.getElementById("draft-model");
+    const regenButton = document.getElementById("regenerate");
+    const chatButton = document.getElementById("chat-button");
+    const copyButton = document.getElementById("copy-button");
+    const insertButton = document.getElementById("insert-button");
+    const needsResult = [chatButton, copyButton, insertButton];
+
+    // The prompt is handed over through storage by the actions popup.
+    const { messages = [], draftTitle = "", tabId } =
+        await browser.storage.local.get(["messages", "draftTitle", "tabId"]);
+    await browser.storage.local.set({ messages: [], draftTitle: "" });
+
+    const title = draftTitle || "Quill";
+    document.title = `Quill - ${title}`;
+    document.getElementById("draft-title").textContent = title;
+
+    let result = "";
+
+    const showState = (className, text) => {
+        const state = document.createElement("div");
+        state.className = `state ${className}`;
+        state.append(text);
+        container.replaceChildren(state);
+        return state;
+    };
+
+    const generate = async () => {
+        result = "";
+        needsResult.forEach(b => { b.disabled = true; });
+        regenButton.disabled = true;
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        showState("", t(language, "draftGenerating")).prepend(spinner);
+
+        let config = {};
+        try {
+            config = await getActiveProviderConfig();
+            modelChip.textContent = `${config.label} · ${config.model}`;
+            result = await fetchResponse(config, messages);
+            const text = document.createElement("div");
+            text.className = "draft-text";
+            text.textContent = result;
+            container.replaceChildren(text);
+            needsResult.forEach(b => { b.disabled = false; });
+            insertButton.focus();
+        } catch (error) {
+            console.error("Quill:", error);
+            error.hasKey = !!config.apiKey;
+            const state = showState("error", formatError(language, error, config.label));
+            const settings = document.createElement("button");
+            settings.className = "btn";
+            settings.textContent = t(language, "draftOpenSettings");
+            settings.addEventListener("click", () => browser.runtime.openOptionsPage());
+            state.append(settings);
+        } finally {
+            regenButton.disabled = false;
+        }
+    };
+
+    regenButton.addEventListener("click", generate);
+
     chatButton.addEventListener("click", async () => {
-        await browser.storage.local.set({messages});
-        await browser.windows.create({ url: "/html/chat.html", type: "popup",
-                         width: 600, height: 600 });
+        await browser.storage.local.set({ messages: [...messages, { role: "assistant", content: result }] });
+        await browser.windows.create({ url: "/html/chat.html", type: "popup", width: 620, height: 600 });
         window.close();
     });
-    insertButton.addEventListener("click", async () => {
-        browser.tabs.sendMessage(tabId, { command: "replaceSelectedText", text: draftContainer.innerText });
-        browser.windows.getCurrent().then((w) => {browser.windows.remove(w.id)})
+
+    copyButton.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(result);
+        copyButton.textContent = t(language, "draftCopied");
+        setTimeout(() => { copyButton.textContent = t(language, "draftCopy"); }, 1500);
     });
-    generate(draftContainer, messages, draftTitle, language);
-    await browser.storage.local.set({ messages: [], draftTitle: "" });
+
+    insertButton.addEventListener("click", async () => {
+        await browser.tabs.sendMessage(tabId, { command: "replaceSelectedText", text: result });
+        window.close();
+    });
+
+    if (messages.length) generate();
 });

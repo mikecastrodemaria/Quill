@@ -1,103 +1,81 @@
 import { fetchResponse } from './API.js';
 import { getChatPrompt } from './globals.js';
-import { getLanguage, t } from './i18n.js';
+import { getLanguage, applyI18n, formatError } from './i18n.js';
+import { getActiveProviderConfig } from './providers.js';
 
-// Helper pour récupérer la config du provider actif (compatible ancien/nouveau format)
-async function getActiveProviderConfig() {
-    const data = await browser.storage.local.get([
-        "activeProvider", "providers",
-        // Rétro-compatibilité
-        "apiKey", "model", "maxTokens", "provider", "ollamaUrl"
-    ]);
+document.addEventListener("DOMContentLoaded", async () => {
+    const language = await getLanguage();
+    applyI18n(language);
 
-    // Nouveau format
-    if (data.providers && data.activeProvider) {
-        const provider = data.activeProvider;
-        const config = data.providers[provider];
-        return {
-            provider: provider,
-            apiKey: config.apiKey || "",
-            model: config.model,
-            maxTokens: data.maxTokens || 4096,
-            ollamaUrl: data.providers.ollama?.url || "http://localhost:11434"
-        };
-    }
+    const input = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+    const container = document.getElementById("messages");
+    const modelChip = document.getElementById("chat-model");
 
-    // Ancien format (rétro-compatibilité)
-    return {
-        provider: data.provider || "anthropic",
-        apiKey: data.apiKey || "",
-        model: data.model,
-        maxTokens: data.maxTokens || 4096,
-        ollamaUrl: data.ollamaUrl || "http://localhost:11434"
-    };
-}
-
-document.addEventListener('DOMContentLoaded', async function () {
-  const language = await getLanguage();
-  var messageInput = document.getElementById('message-input');
-  var sendButton = document.getElementById('send-button');
-  var messagesContainer = document.getElementById('messages');
-  var loadingIcon = document.createElement('img');
-
-  messageInput.placeholder = t(language, "chatPlaceholder");
-  sendButton.innerText = t(language, "chatSend");
-
-  loadingIcon.src = '/images/loading.png';
-  loadingIcon.classList.add('rotate');
-
-  var storage = await browser.storage.local.get(["messages"]);
-    let messages = (storage.messages?.length)? storage.messages : [{role: "system",
-                                    content: getChatPrompt(language)}];
-
-  messages.forEach(function(message) {
-    displayMessage(message.role, message.content);
-  });
-
-  sendButton.addEventListener('click', async function () {
-    var messageText = messageInput.value.trim();
-
-    if (messageText) {
-      messages.push({role: 'user', content: messageText});
-      displayMessage('user', messageText);
-
-      sendButton.disabled = true;
-      messagesContainer.appendChild(loadingIcon);
-
-      try {
-        const { apiKey, model, maxTokens, provider, ollamaUrl } = await getActiveProviderConfig();
-        const response = await fetchResponse(apiKey, model, messages, maxTokens, provider, ollamaUrl);
-        loadingIcon.parentElement.removeChild(loadingIcon);
-        sendButton.disabled = false;
-
-        if (response) {
-          displayMessage('assistant', response);
-          messages.push({role: 'assistant', content: response});
-
-          browser.storage.local.set({messages});
-        }
-      } catch(error) {
-        console.error(error);
-        loadingIcon.parentElement?.removeChild(loadingIcon);
-        sendButton.disabled = false;
-        displayMessage('assistant', `${t(language, 'errorPrefix')} ${error.message}`);
-      }
-
-      messageInput.value = '';
-    }
-  });
-
-  function displayMessage(role, text) {
-    var messageDiv = document.createElement('div');
-    messageDiv.classList.add(role + '-message');
-    messageDiv.classList.add('message');
-    messageDiv.innerText = text;
-    messagesContainer.appendChild(messageDiv);
-
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  }
-});
-
-window.addEventListener('unload', async function (event) {
+    // A draft converted to chat hands its conversation over through storage.
+    const stored = await browser.storage.local.get(["messages"]);
     await browser.storage.local.set({ messages: [], draftTitle: "" });
+    const messages = stored.messages?.length
+        ? stored.messages
+        : [{ role: "system", content: getChatPrompt(language) }];
+
+    const display = (role, text) => {
+        const div = document.createElement("div");
+        div.className = `message ${role}-message`;
+        div.textContent = text;
+        container.appendChild(div);
+        div.scrollIntoView({ block: "end" });
+        return div;
+    };
+
+    messages.forEach(m => display(m.role, m.content));
+
+    getActiveProviderConfig().then(c => { modelChip.textContent = `${c.label} · ${c.model}`; });
+
+    const send = async () => {
+        const text = input.value.trim();
+        if (!text || sendButton.disabled) return;
+
+        container.querySelectorAll(".error-message").forEach(el => el.remove());
+        messages.push({ role: "user", content: text });
+        const userBubble = display("user", text);
+        input.value = "";
+        sendButton.disabled = true;
+
+        const pending = display("assistant", "");
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        pending.appendChild(spinner);
+
+        let config = {};
+        try {
+            config = await getActiveProviderConfig();
+            modelChip.textContent = `${config.label} · ${config.model}`;
+            const response = await fetchResponse(config, messages);
+            pending.textContent = response;
+            pending.scrollIntoView({ block: "end" });
+            messages.push({ role: "assistant", content: response });
+        } catch (error) {
+            console.error("Quill:", error);
+            error.hasKey = !!config.apiKey;
+            // Roll the failed turn back so it can simply be sent again.
+            messages.pop();
+            userBubble.remove();
+            pending.remove();
+            input.value = text;
+            display("error", formatError(language, error, config.label));
+        } finally {
+            sendButton.disabled = false;
+            input.focus();
+        }
+    };
+
+    sendButton.addEventListener("click", send);
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+            event.preventDefault();
+            send();
+        }
+    });
+    input.focus();
 });

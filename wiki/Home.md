@@ -23,6 +23,7 @@ Bienvenue dans la documentation de **Quill** - l'extension Thunderbird pour trai
 ### Provider Setup
 - [[Anthropic-Setup]] - Configure Claude API
 - [[OpenAI-Setup]] - Configure GPT API
+- [[OVHcloud-Setup]] - Configure OVHcloud AI Endpoints
 - [[Ollama-Setup]] - Configure local AI with Ollama
 
 ### Usage

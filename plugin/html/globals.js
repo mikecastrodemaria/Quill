@@ -49,4 +49,3 @@ export const getChatPrompt = (language = DEFAULT_LANGUAGE) => {
 export const defaultActions = getDefaultActions(DEFAULT_LANGUAGE);
 export const chatPrompt = getChatPrompt(DEFAULT_LANGUAGE);
 
-export const defaultModel = "claude-sonnet-4-5-20250929";

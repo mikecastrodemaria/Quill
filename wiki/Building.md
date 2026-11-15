@@ -56,12 +56,12 @@ Changes require reloading the extension.
 
 ```bash
 cd plugin
-zip -r ../quill-1.2.0.xpi . -x "*.DS_Store"
+zip -r ../quill-1.4.0.xpi . -x "*.DS_Store"
 ```
 
 Or on Windows:
 ```powershell
-Compress-Archive -Path plugin\* -DestinationPath quill-1.2.0.xpi
+Compress-Archive -Path plugin\* -DestinationPath quill-1.4.0.xpi
 ```
 
 ## Testing
