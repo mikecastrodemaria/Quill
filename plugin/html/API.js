@@ -64,12 +64,35 @@ const anthropicHeaders = (apiKey) => ({
 
 // ============ GENERATION ============
 
+// A message may carry images: { role, content, images: [{ mediaType, data }] }
+// where data is base64 without the "data:" prefix. Each provider wants its own shape.
+
+const toAnthropic = ({ role, content, images }) => (images?.length ? {
+    role,
+    content: [
+        ...images.map(i => ({ type: "image", source: { type: "base64", media_type: i.mediaType, data: i.data } })),
+        { type: "text", text: content }
+    ]
+} : { role, content });
+
+const toOpenAI = ({ role, content, images }) => (images?.length ? {
+    role,
+    content: [
+        { type: "text", text: content },
+        ...images.map(i => ({ type: "image_url", image_url: { url: `data:${i.mediaType};base64,${i.data}` } }))
+    ]
+} : { role, content });
+
+const toOllama = ({ role, content, images }) => (images?.length
+    ? { role, content, images: images.map(i => i.data) }
+    : { role, content });
+
 const generateAnthropic = async ({ apiKey, model, maxTokens }, messages) => {
     const system = messages.filter(m => m.role === "system").map(m => m.content).join("\n\n");
     const body = {
         model,
         max_tokens: maxTokens > 0 ? maxTokens : 4096,
-        messages: messages.filter(m => m.role !== "system").map(({ role, content }) => ({ role, content }))
+        messages: messages.filter(m => m.role !== "system").map(toAnthropic)
     };
     if (system) body.system = system;
 
@@ -84,7 +107,7 @@ const generateAnthropic = async ({ apiKey, model, maxTokens }, messages) => {
 // tokenParam differs: OpenAI's recent models only accept max_completion_tokens,
 // while most OpenAI-compatible servers (OVHcloud, vLLM...) expect max_tokens.
 const generateOpenAICompatible = async (provider, baseUrl, tokenParam, { apiKey, model, maxTokens }, messages) => {
-    const body = { model, messages: messages.map(({ role, content }) => ({ role, content })) };
+    const body = { model, messages: messages.map(toOpenAI) };
     if (maxTokens > 0) body[tokenParam] = maxTokens;
 
     const data = await request(provider, `${baseUrl}/chat/completions`, {
@@ -101,7 +124,7 @@ const generateOllama = async ({ url, model }, messages) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             model,
-            messages: messages.map(({ role, content }) => ({ role, content })),
+            messages: messages.map(toOllama),
             stream: false
         })
     });
